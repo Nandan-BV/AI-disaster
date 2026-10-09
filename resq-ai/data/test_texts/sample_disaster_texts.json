@@ -1,0 +1,27 @@
+[
+  {
+    "id": "text_flood_01",
+    "text": "Heavy flooding has covered the main road near the city center. Water levels are rising rapidly and several vehicles are stuck. Residents are requesting immediate rescue assistance.",
+    "expected_disaster_type": "flood"
+  },
+  {
+    "id": "text_wildfire_01",
+    "text": "Wildfire spreading in the forest area near residential zones. Evacuation orders have been issued for three neighborhoods. Fire departments from multiple counties are responding.",
+    "expected_disaster_type": "wildfire"
+  },
+  {
+    "id": "text_earthquake_01",
+    "text": "Strong earthquake felt across the metropolitan area at 14:32 local time. Buildings swayed for approximately 30 seconds. No immediate reports of major damage but people evacuated offices as precaution.",
+    "expected_disaster_type": "earthquake"
+  },
+  {
+    "id": "text_landslide_01",
+    "text": "Major landslide blocked the highway connecting the valley to the main city. Several trucks and cars are trapped. Debris covers approximately 200 meters of road. Rescue teams en route.",
+    "expected_disaster_type": "landslide"
+  },
+  {
+    "id": "text_building_collapse_01",
+    "text": "Partial building collapse reported in the old market district. Three-story commercial building collapsed during renovation work. Emergency services on scene searching for workers who may be trapped.",
+    "expected_disaster_type": "building_collapse"
+  }
+]

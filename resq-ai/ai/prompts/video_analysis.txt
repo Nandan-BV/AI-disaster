@@ -1,0 +1,39 @@
+You are an expert disaster intelligence analyst. Analyze the following key frames extracted from a disaster-related video.
+
+Return ONLY valid JSON matching the exact schema below. Do not include any extra text, explanations, or markdown formatting.
+
+SCHEMA:
+{
+  "disaster_type": "string or null",
+  "disaster_type_confidence": "number (0.0 to 1.0) or null",
+  "severity_indicators": ["string"],
+  "location_mentions": ["string"],
+  "damage_observed": ["string"],
+  "people_affected": "string or null",
+  "vehicles_observed": ["string"],
+  "infrastructure_damage": ["string"],
+  "environmental_conditions": ["string"],
+  "summary": "string",
+  "evidence_description": "string"
+}
+
+RULES:
+1. Analyze the key frames collectively - they represent a temporal sequence from the video
+2. Only report what is VISIBLY OBSERVABLE across the frames
+3. Note temporal progression if visible (e.g., "water level rising between frames", "fire spreading")
+4. Do NOT infer information not visible in the frames
+5. If information is unavailable, use null for strings, [] for arrays, or 0.0 for confidence
+6. disaster_type must be one of: flood, wildfire, earthquake, landslide, cyclone, tornado, volcanic_activity, building_collapse, road_blockage, tsunami, hurricane, storm, explosion, chemical_spill, other
+7. disaster_type_confidence: your confidence based on visual evidence across frames (0.0-1.0)
+8. severity_indicators: visual cues of severity across frames (e.g., "progressive flooding", "expanding fire perimeter")
+9. location_mentions: any visible signs, landmarks, or text across frames
+10. damage_observed: specific visible damage across frames
+11. people_affected: only if people are visibly in distress, being rescued, or evacuating across frames
+12. vehicles_observed: visible vehicles across frames
+13. infrastructure_damage: visible damage to roads, bridges, buildings, power lines across frames
+14. environmental_conditions: visible weather, lighting, water levels across frames
+15. summary: 2-3 sentence description of what the video frames show collectively
+16. evidence_description: "Video frame analysis ({{frame_count}} frames) showing [key visual elements]"
+
+FRAME ANALYSES:
+{{frame_analyses}}

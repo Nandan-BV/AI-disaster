@@ -1,0 +1,269 @@
+[
+  {
+    "name": "Bengaluru Medical Center",
+    "infrastructure_type": "hospital",
+    "latitude": 12.9716,
+    "longitude": 77.5946,
+    "address": "MG Road, Bengaluru, Karnataka 560001",
+    "capacity": 350,
+    "status": "operational",
+    "road_status": "open",
+    "metadata": {
+      "bed_count": 350,
+      "icu_beds": 30,
+      "emergency_dept": true,
+      "trauma_center": true
+    }
+  },
+  {
+    "name": "City General Hospital",
+    "infrastructure_type": "hospital",
+    "latitude": 12.9730,
+    "longitude": 77.5950,
+    "address": "Brigade Road, Bengaluru, Karnataka 560025",
+    "capacity": 280,
+    "status": "operational",
+    "road_status": "open",
+    "metadata": {
+      "bed_count": 280,
+      "icu_beds": 20,
+      "emergency_dept": true
+    }
+  },
+  {
+    "name": "St. Mary's Hospital",
+    "infrastructure_type": "hospital",
+    "latitude": 12.9650,
+    "longitude": 77.5900,
+    "address": "Residency Road, Bengaluru, Karnataka 560001",
+    "capacity": 200,
+    "status": "partially_operational",
+    "road_status": "open",
+    "metadata": {
+      "bed_count": 200,
+      "icu_beds": 15,
+      "emergency_dept": true
+    }
+  },
+  {
+    "name": "Community Emergency Shelter - MG Road",
+    "infrastructure_type": "shelter",
+    "latitude": 12.9720,
+    "longitude": 77.5940,
+    "address": "Community Hall, MG Road, Bengaluru",
+    "capacity": 500,
+    "status": "operational",
+    "road_status": "open",
+    "metadata": {
+      "capacity_people": 500,
+      "facilities": ["water", "toilets", "first_aid"],
+      "wheelchair_accessible": true
+    }
+  },
+  {
+    "name": "Brigade Road Relief Center",
+    "infrastructure_type": "shelter",
+    "latitude": 12.9740,
+    "longitude": 77.5960,
+    "address": "Community Center, Brigade Road, Bengaluru",
+    "capacity": 300,
+    "status": "operational",
+    "road_status": "open",
+    "metadata": {
+      "capacity_people": 300,
+      "facilities": ["water", "food_distribution", "medical_aid"],
+      "wheelchair_accessible": true
+    }
+  },
+  {
+    "name": "Koramangala Fire Station",
+    "infrastructure_type": "fire_station",
+    "latitude": 12.9350,
+    "longitude": 77.6150,
+    "address": "80 Feet Road, Koramangala, Bengaluru",
+    "capacity": 0,
+    "status": "operational",
+    "road_status": "open",
+    "metadata": {
+      "fire_engines": 4,
+      "ambulances": 2,
+      "personnel": 35,
+      "water_tenders": 2
+    }
+  },
+  {
+    "name": "Central Fire Station - Shivajinagar",
+    "infrastructure_type": "fire_station",
+    "latitude": 12.9800,
+    "longitude": 77.5950,
+    "address": "Hosur Road, Shivajinagar, Bengaluru",
+    "capacity": 0,
+    "status": "operational",
+    "road_status": "open",
+    "metadata": {
+      "fire_engines": 6,
+      "ambulances": 3,
+      "personnel": 50,
+      "water_tenders": 3,
+      "hazardous_materials_unit": true
+    }
+  },
+  {
+    "name": "MG Road Police Station",
+    "infrastructure_type": "police_station",
+    "latitude": 12.9710,
+    "longitude": 77.5935,
+    "address": "MG Road, Bengaluru",
+    "capacity": 0,
+    "status": "operational",
+    "road_status": "open",
+    "metadata": {
+      "personnel": 40,
+      "vehicles": 10,
+      "lockup_capacity": 20
+    }
+  },
+  {
+    "name": "Brigade Road Police Station",
+    "infrastructure_type": "police_station",
+    "latitude": 12.9735,
+    "longitude": 77.5955,
+    "address": "Brigade Road, Bengaluru",
+    "capacity": 0,
+    "status": "operational",
+    "road_status": "open",
+    "metadata": {
+      "personnel": 30,
+      "vehicles": 8,
+      "lockup_capacity": 15
+    }
+  },
+  {
+    "name": "MG Road Metro Bridge",
+    "infrastructure_type": "bridge",
+    "latitude": 12.9715,
+    "longitude": 77.5940,
+    "address": "MG Road Metro Crossing, Bengaluru",
+    "capacity": 0,
+    "status": "operational",
+    "road_status": "open",
+    "metadata": {
+      "structure_type": "railway_overpass",
+      "length_meters": 120,
+      "lanes": 4,
+      "load_capacity_tons": 40
+    }
+  },
+  {
+    "name": "Brigade Road Flyover",
+    "infrastructure_type": "bridge",
+    "latitude": 12.9730,
+    "longitude": 77.5952,
+    "address": "Brigade Road Junction, Bengaluru",
+    "capacity": 0,
+    "status": "operational",
+    "road_status": "open",
+    "metadata": {
+      "structure_type": "flyover",
+      "length_meters": 80,
+      "lanes": 4,
+      "load_capacity_tons": 35
+    }
+  },
+  {
+    "name": "MG Road (Brigade to Trinity)",
+    "infrastructure_type": "road",
+    "latitude": 12.9718,
+    "longitude": 77.5942,
+    "address": "MG Road, Bengaluru",
+    "capacity": 0,
+    "status": "operational",
+    "road_status": "open",
+    "metadata": {
+      "road_class": "arterial",
+      "lanes": 4,
+      "surface": "asphalt",
+      "speed_limit_kmh": 50
+    }
+  },
+  {
+    "name": "Brigade Road (MG to Residency)",
+    "infrastructure_type": "road",
+    "latitude": 12.9725,
+    "longitude": 77.5948,
+    "address": "Brigade Road, Bengaluru",
+    "capacity": 0,
+    "status": "operational",
+    "road_status": "partially_blocked",
+    "metadata": {
+      "road_class": "arterial",
+      "lanes": 4,
+      "surface": "asphalt",
+      "speed_limit_kmh": 50
+    }
+  },
+  {
+    "name": "Residency Road",
+    "infrastructure_type": "road",
+    "latitude": 12.9680,
+    "longitude": 77.5900,
+    "address": "Residency Road, Bengaluru",
+    "capacity": 0,
+    "status": "operational",
+    "road_status": "open",
+    "metadata": {
+      "road_class": "arterial",
+      "lanes": 4,
+      "surface": "asphalt",
+      "speed_limit_kmh": 50
+    }
+  },
+  {
+    "name": "Bangalore Emergency Operations Center",
+    "infrastructure_type": "emergency_center",
+    "latitude": 12.9750,
+    "longitude": 77.5980,
+    "address": "BBMP Head Office, NR Square, Bengaluru",
+    "capacity": 100,
+    "status": "operational",
+    "road_status": "open",
+    "metadata": {
+      "capacity_people": 100,
+      "communication_systems": ["radio", "satellite", "internet"],
+      "coordination_agencies": ["BBMP", "Fire", "Police", "Health"],
+      "backup_power": true
+    }
+  },
+  {
+    "name": "Kempegowda International Airport Medical Facility",
+    "infrastructure_type": "hospital",
+    "latitude": 13.1986,
+    "longitude": 77.7066,
+    "address": "KIA, Devanahalli, Bengaluru",
+    "capacity": 50,
+    "status": "operational",
+    "road_status": "open",
+    "metadata": {
+      "bed_count": 50,
+      "icu_beds": 5,
+      "emergency_dept": true,
+      "note": "Outside default analysis radius for city center incidents"
+    }
+  },
+  {
+    "name": "Electronic City Fire Station",
+    "infrastructure_type": "fire_station",
+    "latitude": 12.8450,
+    "longitude": 77.6600,
+    "address": "Electronic City Phase 1, Bengaluru",
+    "capacity": 0,
+    "status": "operational",
+    "road_status": "open",
+    "metadata": {
+      "fire_engines": 3,
+      "ambulances": 1,
+      "personnel": 25,
+      "note": "Outside default analysis radius for city center incidents"
+    }
+  }
+]

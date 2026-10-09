@@ -1,0 +1,207 @@
+[
+  {
+    "name": "MG Road Central",
+    "population": 12500,
+    "latitude": 12.9716,
+    "longitude": 77.5946,
+    "location_name": "MG Road, Bengaluru",
+    "vulnerability_factor": 0.7,
+    "metadata": {
+      "area_type": "commercial",
+      "density": "high",
+      "flood_history": true
+    }
+  },
+  {
+    "name": "Brigade Road Area",
+    "population": 8200,
+    "latitude": 12.9725,
+    "longitude": 77.5955,
+    "location_name": "Brigade Road, Bengaluru",
+    "vulnerability_factor": 0.6,
+    "metadata": {
+      "area_type": "commercial",
+      "density": "high"
+    }
+  },
+  {
+    "name": "Residency Road Residential",
+    "population": 15000,
+    "latitude": 12.9680,
+    "longitude": 77.5900,
+    "location_name": "Residency Road, Bengaluru",
+    "vulnerability_factor": 0.8,
+    "metadata": {
+      "area_type": "residential",
+      "density": "very_high",
+      "elderly_population_pct": 15
+    }
+  },
+  {
+    "name": "Koramangala 4th Block",
+    "population": 22000,
+    "latitude": 12.9350,
+    "longitude": 77.6150,
+    "location_name": "Koramangala, Bengaluru",
+    "vulnerability_factor": 0.5,
+    "metadata": {
+      "area_type": "mixed",
+      "density": "very_high",
+      "tech_workers_pct": 40
+    }
+  },
+  {
+    "name": "Indiranagar 100 Feet Road",
+    "population": 18000,
+    "latitude": 12.9784,
+    "longitude": 77.6408,
+    "location_name": "Indiranagar, Bengaluru",
+    "vulnerability_factor": 0.4,
+    "metadata": {
+      "area_type": "commercial_residential",
+      "density": "high"
+    }
+  },
+  {
+    "name": "Jayanagar 4th T Block",
+    "population": 14500,
+    "latitude": 12.9250,
+    "longitude": 77.5938,
+    "location_name": "Jayanagar, Bengaluru",
+    "vulnerability_factor": 0.6,
+    "metadata": {
+      "area_type": "residential",
+      "density": "high",
+      "elderly_population_pct": 20
+    }
+  },
+  {
+    "name": "Electronic City Phase 1",
+    "population": 25000,
+    "latitude": 12.8450,
+    "longitude": 77.6600,
+    "location_name": "Electronic City, Bengaluru",
+    "vulnerability_factor": 0.3,
+    "metadata": {
+      "area_type": "tech_park",
+      "density": "medium",
+      "daytime_population_multiplier": 3
+    }
+  },
+  {
+    "name": "Whitefield Tech Park",
+    "population": 35000,
+    "latitude": 12.9698,
+    "longitude": 77.7500,
+    "location_name": "Whitefield, Bengaluru",
+    "vulnerability_factor": 0.25,
+    "metadata": {
+      "area_type": "tech_park",
+      "density": "high",
+      "daytime_population_multiplier": 4
+    }
+  },
+  {
+    "name": "Hebbal Industrial Area",
+    "population": 8000,
+    "latitude": 13.0350,
+    "longitude": 77.5950,
+    "location_name": "Hebbal, Bengaluru",
+    "vulnerability_factor": 0.55,
+    "metadata": {
+      "area_type": "industrial",
+      "density": "medium"
+    }
+  },
+  {
+    "name": "Yelahanka New Town",
+    "population": 30000,
+    "latitude": 13.1000,
+    "longitude": 77.6050,
+    "location_name": "Yelahanka, Bengaluru",
+    "vulnerability_factor": 0.65,
+    "metadata": {
+      "area_type": "residential",
+      "density": "very_high",
+      "elderly_population_pct": 18,
+      "flood_prone": true
+    }
+  },
+  {
+    "name": "Sarjapur Road Corridor",
+    "population": 40000,
+    "latitude": 12.8800,
+    "longitude": 77.7000,
+    "location_name": "Sarjapur Road, Bengaluru",
+    "vulnerability_factor": 0.45,
+    "metadata": {
+      "area_type": "mixed",
+      "density": "very_high",
+      "rapid_urbanization": true
+    }
+  },
+  {
+    "name": "Bannerghatta Road Residential",
+    "population": 12000,
+    "latitude": 12.8000,
+    "longitude": 77.5700,
+    "location_name": "Bannerghatta, Bengaluru",
+    "vulnerability_factor": 0.7,
+    "metadata": {
+      "area_type": "residential",
+      "density": "high",
+      "near_forest": true,
+      "landslide_risk": "medium"
+    }
+  },
+  {
+    "name": "Rajajinagar Industrial",
+    "population": 6500,
+    "latitude": 12.9850,
+    "longitude": 77.5500,
+    "location_name": "Rajajinagar, Bengaluru",
+    "vulnerability_factor": 0.4,
+    "metadata": {
+      "area_type": "industrial",
+      "density": "medium"
+    }
+  },
+  {
+    "name": "Malleshwaram Residential",
+    "population": 16000,
+    "latitude": 13.0050,
+    "longitude": 77.5700,
+    "location_name": "Malleshwaram, Bengaluru",
+    "vulnerability_factor": 0.55,
+    "metadata": {
+      "area_type": "residential",
+      "density": "high",
+      "elderly_population_pct": 22
+    }
+  },
+  {
+    "name": "BTM Layout",
+    "population": 28000,
+    "latitude": 12.9165,
+    "longitude": 77.6100,
+    "location_name": "BTM Layout, Bengaluru",
+    "vulnerability_factor": 0.5,
+    "metadata": {
+      "area_type": "residential_commercial",
+      "density": "very_high"
+    }
+  },
+  {
+    "name": "HSR Layout",
+    "population": 22000,
+    "latitude": 12.9080,
+    "longitude": 77.6475,
+    "location_name": "HSR Layout, Bengaluru",
+    "vulnerability_factor": 0.35,
+    "metadata": {
+      "area_type": "residential_tech",
+      "density": "high",
+      "tech_workers_pct": 35
+    }
+  }
+]

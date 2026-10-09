@@ -1,0 +1,162 @@
+[
+  {
+    "source": "social_media",
+    "text_content": "Heavy flooding reported near the city center, water levels rising rapidly",
+    "event_type": "flood",
+    "latitude": 12.9716,
+    "longitude": 77.5946,
+    "location_name": "Bengaluru, Karnataka",
+    "timestamp": "2026-09-21T10:30:00",
+    "image_url": null,
+    "video_url": null,
+    "metadata": {
+      "platform": "twitter",
+      "author": "weather_watcher_bangalore",
+      "verified": false
+    }
+  },
+  {
+    "source": "news",
+    "text_content": "Wildfire spreading in the forest area near residential zones, evacuation underway",
+    "event_type": "wildfire",
+    "latitude": 34.0522,
+    "longitude": -118.2437,
+    "location_name": "Los Angeles County, California",
+    "timestamp": "2026-09-20T14:45:00",
+    "image_url": "https://example.com/images/wildfire_la.jpg",
+    "video_url": null,
+    "metadata": {
+      "platform": "local_news",
+      "reporter": "fire_department",
+      "acres_burned": 500
+    }
+  },
+  {
+    "source": "satellite",
+    "text_content": "Seismic activity detected, magnitude 5.2 earthquake",
+    "event_type": "earthquake",
+    "latitude": 35.6762,
+    "longitude": 139.6503,
+    "location_name": "Tokyo, Japan",
+    "timestamp": "2026-09-19T08:15:00",
+    "image_url": null,
+    "video_url": null,
+    "metadata": {
+      "platform": "usgs",
+      "magnitude": 5.2,
+      "depth_km": 10
+    }
+  },
+  {
+    "source": "social_media",
+    "text_content": "Landslide blocked the main highway, several vehicles trapped",
+    "event_type": "landslide",
+    "latitude": 30.3165,
+    "longitude": 78.0322,
+    "location_name": "Dehradun, Uttarakhand",
+    "timestamp": "2026-09-18T16:20:00",
+    "image_url": "https://example.com/images/landslide_dehradun.jpg",
+    "video_url": "https://example.com/videos/landslide_dehradun.mp4",
+    "metadata": {
+      "platform": "instagram",
+      "author": "himalayan_traveler",
+      "highway": "NH-7"
+    }
+  },
+  {
+    "source": "weather_service",
+    "text_content": "Cyclone warning issued for coastal regions, wind speeds up to 150 km/h expected",
+    "event_type": "cyclone",
+    "latitude": 21.1458,
+    "longitude": 79.0882,
+    "location_name": "Nagpur, Maharashtra",
+    "timestamp": "2026-09-17T12:00:00",
+    "image_url": null,
+    "video_url": null,
+    "metadata": {
+      "platform": "imd",
+      "cyclone_name": "Cyclone Varuna",
+      "category": 3
+    }
+  },
+  {
+    "source": "emergency_services",
+    "text_content": "Building collapse reported in old market area, rescue operations ongoing",
+    "event_type": "building_collapse",
+    "latitude": 28.6139,
+    "longitude": 77.2090,
+    "location_name": "New Delhi, Delhi",
+    "timestamp": "2026-09-16T09:30:00",
+    "image_url": "https://example.com/images/building_collapse_delhi.jpg",
+    "video_url": null,
+    "metadata": {
+      "platform": "fire_brigade",
+      "building_type": "commercial",
+      "floors": 3
+    }
+  },
+  {
+    "source": "social_media",
+    "text_content": "Major road blockage due to fallen trees after heavy storms",
+    "event_type": "road_blockage",
+    "latitude": 19.0760,
+    "longitude": 72.8777,
+    "location_name": "Mumbai, Maharashtra",
+    "timestamp": "2026-09-15T18:45:00",
+    "image_url": "https://example.com/images/road_blockage_mumbai.jpg",
+    "video_url": null,
+    "metadata": {
+      "platform": "whatsapp",
+      "author": "mumbai_commuter",
+      "road": "Western Express Highway"
+    }
+  },
+  {
+    "source": "news",
+    "text_content": "Flash flood in valley region, multiple villages affected",
+    "event_type": "flood",
+    "latitude": 34.1526,
+    "longitude": 74.8042,
+    "location_name": "Srinagar, Jammu & Kashmir",
+    "timestamp": "2026-09-14T07:10:00",
+    "image_url": null,
+    "video_url": "https://example.com/videos/flash_flood_srinagar.mp4",
+    "metadata": {
+      "platform": "national_news",
+      "villages_affected": 12,
+      "rescue_teams": 5
+    }
+  },
+  {
+    "source": "satellite",
+    "text_content": "Thermal anomaly detected indicating potential volcanic activity",
+    "event_type": "volcanic_activity",
+    "latitude": -6.1024,
+    "longitude": 105.4231,
+    "location_name": "Krakatoa, Indonesia",
+    "timestamp": "2026-09-13T22:00:00",
+    "image_url": "https://example.com/images/krakatoa_thermal.jpg",
+    "video_url": null,
+    "metadata": {
+      "platform": "nasa_firms",
+      "confidence": "high",
+      "temperature_celsius": 450
+    }
+  },
+  {
+    "source": "social_media",
+    "text_content": "Tornado touched down in rural area, property damage reported",
+    "event_type": "tornado",
+    "latitude": 39.7392,
+    "longitude": -104.9903,
+    "location_name": "Denver, Colorado",
+    "timestamp": "2026-09-12T15:30:00",
+    "image_url": "https://example.com/images/tornado_denver.jpg",
+    "video_url": "https://example.com/videos/tornado_denver.mp4",
+    "metadata": {
+      "platform": "tiktok",
+      "author": "storm_chaser_co",
+      "ef_scale": "EF2"
+    }
+  }
+]

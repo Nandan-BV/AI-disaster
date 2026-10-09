@@ -1,0 +1,346 @@
+[
+  {
+    "name": "Ambulance Unit A1",
+    "resource_type": "ambulance",
+    "status": "available",
+    "latitude": 12.9716,
+    "longitude": 77.5946,
+    "address": "MG Road, Bengaluru, Karnataka",
+    "capacity": 4,
+    "current_load": 0,
+    "capabilities": {
+      "medical": true,
+      "trauma": true,
+      "water_rescue": false,
+      "night_operation": true
+    },
+    "organization": "Emergency Medical Services",
+    "metadata": {
+      "vehicle_id": "AMB-001",
+      "last_maintenance": "2026-08-15"
+    }
+  },
+  {
+    "name": "Ambulance Unit A2",
+    "resource_type": "ambulance",
+    "status": "available",
+    "latitude": 12.9750,
+    "longitude": 77.5960,
+    "address": "Brigade Road, Bengaluru",
+    "capacity": 4,
+    "current_load": 0,
+    "capabilities": {
+      "medical": true,
+      "trauma": true,
+      "water_rescue": false,
+      "night_operation": true
+    },
+    "organization": "Emergency Medical Services",
+    "metadata": {
+      "vehicle_id": "AMB-002",
+      "last_maintenance": "2026-08-20"
+    }
+  },
+  {
+    "name": "Ambulance Unit A3",
+    "resource_type": "ambulance",
+    "status": "deployed",
+    "latitude": 12.9680,
+    "longitude": 77.5900,
+    "address": "Residency Road, Bengaluru",
+    "capacity": 4,
+    "current_load": 2,
+    "capabilities": {
+      "medical": true,
+      "trauma": true,
+      "water_rescue": false,
+      "night_operation": true
+    },
+    "organization": "Emergency Medical Services",
+    "metadata": {
+      "vehicle_id": "AMB-003",
+      "last_maintenance": "2026-08-10"
+    }
+  },
+  {
+    "name": "Fire Engine FE-1",
+    "resource_type": "fire_vehicle",
+    "status": "available",
+    "latitude": 12.9720,
+    "longitude": 77.5950,
+    "address": "Shivajinagar Fire Station, Bengaluru",
+    "capacity": 0,
+    "current_load": 0,
+    "capabilities": {
+      "fire_suppression": true,
+      "water_rescue": true,
+      "hazmat": false,
+      "high_rise": true
+    },
+    "organization": "Bengaluru Fire Department",
+    "metadata": {
+      "vehicle_id": "FE-001",
+      "water_capacity_liters": 5000,
+      "last_inspection": "2026-08-01"
+    }
+  },
+  {
+    "name": "Fire Engine FE-2",
+    "resource_type": "fire_vehicle",
+    "status": "available",
+    "latitude": 12.9350,
+    "longitude": 77.6150,
+    "address": "Koramangala Fire Station, Bengaluru",
+    "capacity": 0,
+    "current_load": 0,
+    "capabilities": {
+      "fire_suppression": true,
+      "water_rescue": true,
+      "hazmat": false,
+      "high_rise": false
+    },
+    "organization": "Bengaluru Fire Department",
+    "metadata": {
+      "vehicle_id": "FE-002",
+      "water_capacity_liters": 4500,
+      "last_inspection": "2026-07-28"
+    }
+  },
+  {
+    "name": "Rescue Team Alpha",
+    "resource_type": "rescue_team",
+    "status": "available",
+    "latitude": 12.9716,
+    "longitude": 77.5946,
+    "address": "Central Disaster Response Center, Bengaluru",
+    "capacity": 8,
+    "current_load": 0,
+    "capabilities": {
+      "heavy_rescue": true,
+      "water_rescue": true,
+      "medical": false,
+      "rope_rescue": true,
+      "confined_space": true
+    },
+    "organization": "National Disaster Response Force",
+    "metadata": {
+      "team_id": "NDRF-01",
+      "personnel_count": 8,
+      "last_training": "2026-08-01"
+    }
+  },
+  {
+    "name": "Rescue Team Bravo",
+    "resource_type": "rescue_team",
+    "status": "available",
+    "latitude": 12.9350,
+    "longitude": 77.6150,
+    "address": "Koramangala Emergency Center, Bengaluru",
+    "capacity": 6,
+    "current_load": 0,
+    "capabilities": {
+      "heavy_rescue": true,
+      "water_rescue": true,
+      "medical": false,
+      "rope_rescue": true,
+      "confined_space": false
+    },
+    "organization": "National Disaster Response Force",
+    "metadata": {
+      "team_id": "NDRF-02",
+      "personnel_count": 6,
+      "last_training": "2026-07-15"
+    }
+  },
+  {
+    "name": "Police Unit PU-1",
+    "resource_type": "police_unit",
+    "status": "available",
+    "latitude": 12.9710,
+    "longitude": 77.5935,
+    "address": "MG Road Police Station, Bengaluru",
+    "capacity": 4,
+    "current_load": 0,
+    "capabilities": {
+      "traffic_control": true,
+      "crowd_management": true,
+      "security": true,
+      "emergency_response": true
+    },
+    "organization": "Bengaluru City Police",
+    "metadata": {
+      "unit_id": "PU-001",
+      "vehicle_count": 2,
+      "personnel": 4
+    }
+  },
+  {
+    "name": "Police Unit PU-2",
+    "resource_type": "police_unit",
+    "status": "available",
+    "latitude": 12.9740,
+    "longitude": 77.5960,
+    "address": "Brigade Road Police Station, Bengaluru",
+    "capacity": 4,
+    "current_load": 0,
+    "capabilities": {
+      "traffic_control": true,
+      "crowd_management": true,
+      "security": true,
+      "emergency_response": true
+    },
+    "organization": "Bengaluru City Police",
+    "metadata": {
+      "unit_id": "PU-002",
+      "vehicle_count": 2,
+      "personnel": 4
+    }
+  },
+  {
+    "name": "Community Shelter MG Road",
+    "resource_type": "shelter",
+    "status": "available",
+    "latitude": 12.9720,
+    "longitude": 77.5945,
+    "address": "Community Hall, MG Road, Bengaluru",
+    "capacity": 500,
+    "current_load": 0,
+    "capabilities": {
+      "overnight": true,
+      "food": true,
+      "medical_basic": true,
+      "wheelchair_accessible": true,
+      "pet_friendly": false
+    },
+    "organization": "Bengaluru Municipal Corporation",
+    "metadata": {
+      "shelter_id": "SHL-001",
+      "manager": "Rajesh Kumar",
+      "contact": "+91-80-2222-1234"
+    }
+  },
+  {
+    "name": "Community Shelter Brigade Road",
+    "resource_type": "shelter",
+    "status": "available",
+    "latitude": 12.9735,
+    "longitude": 77.5955,
+    "address": "Community Center, Brigade Road, Bengaluru",
+    "capacity": 300,
+    "current_load": 0,
+    "capabilities": {
+      "overnight": true,
+      "food": true,
+      "medical_basic": true,
+      "wheelchair_accessible": true,
+      "pet_friendly": true
+    },
+    "organization": "Bengaluru Municipal Corporation",
+    "metadata": {
+      "shelter_id": "SHL-002",
+      "manager": "Priya Sharma",
+      "contact": "+91-80-2222-5678"
+    }
+  },
+  {
+    "name": "City General Hospital",
+    "resource_type": "hospital",
+    "status": "operational",
+    "latitude": 12.9716,
+    "longitude": 77.5946,
+    "address": "MG Road, Bengaluru",
+    "capacity": 350,
+    "current_load": 280,
+    "capabilities": {
+      "emergency": true,
+      "trauma": true,
+      "icu": true,
+      "surgery": true,
+      "maternity": true,
+      "pediatrics": true,
+      "burn_unit": false
+    },
+    "organization": "Health Department, Government of Karnataka",
+    "metadata": {
+      "hospital_id": "HOSP-001",
+      "beds_total": 350,
+      "beds_available": 70,
+      "ambulances": 4,
+      "helipad": true
+    }
+  },
+  {
+    "name": "St. Mary's Hospital",
+    "resource_type": "hospital",
+    "status": "operational",
+    "latitude": 12.9680,
+    "longitude": 77.5900,
+    "address": "Residency Road, Bengaluru",
+    "capacity": 280,
+    "current_load": 220,
+    "capabilities": {
+      "emergency": true,
+      "trauma": true,
+      "icu": true,
+      "surgery": true,
+      "maternity": true,
+      "pediatrics": true,
+      "burn_unit": true
+    },
+    "organization": "St. Mary's Health Trust",
+    "metadata": {
+      "hospital_id": "HOSP-002",
+      "beds_total": 280,
+      "beds_available": 60,
+      "ambulances": 3,
+      "helipad": false
+    }
+  },
+  {
+    "name": "Surveillance Drone D1",
+    "resource_type": "drone",
+    "status": "available",
+    "latitude": 12.9716,
+    "longitude": 77.5946,
+    "address": "Emergency Operations Center, Bengaluru",
+    "capacity": 0,
+    "current_load": 0,
+    "capabilities": {
+      "aerial_surveillance": true,
+      "thermal_imaging": true,
+      "night_vision": true,
+      "live_streaming": true,
+      "payload_delivery": false
+    },
+    "organization": "Disaster Response Unit",
+    "metadata": {
+      "drone_id": "DRN-001",
+      "max_flight_time_minutes": 45,
+      "max_range_km": 10,
+      "last_calibration": "2026-08-10"
+    }
+  },
+  {
+    "name": "Emergency Response Vehicle ERV-1",
+    "resource_type": "emergency_vehicle",
+    "status": "available",
+    "latitude": 12.9716,
+    "longitude": 77.5946,
+    "address": "Emergency Operations Center, Bengaluru",
+    "capacity": 6,
+    "current_load": 0,
+    "capabilities": {
+      "command_control": true,
+      "communications": true,
+      "medical_support": true,
+      "lighting": true,
+      "generator": true
+    },
+    "organization": "Emergency Operations Center",
+    "metadata": {
+      "vehicle_id": "ERV-001",
+      "fuel_type": "diesel",
+      "last_service": "2026-08-05"
+    }
+  }
+]

@@ -1,0 +1,39 @@
+You are an expert disaster intelligence analyst. Analyze the following image for disaster-related visual evidence.
+
+Return ONLY valid JSON matching the exact schema below. Do not include any extra text, explanations, or markdown formatting.
+
+SCHEMA:
+{
+  "disaster_type": "string or null",
+  "disaster_type_confidence": "number (0.0 to 1.0) or null",
+  "severity_indicators": ["string"],
+  "location_mentions": ["string"],
+  "damage_observed": ["string"],
+  "people_affected": "string or null",
+  "vehicles_observed": ["string"],
+  "infrastructure_damage": ["string"],
+  "environmental_conditions": ["string"],
+  "summary": "string",
+  "evidence_description": "string"
+}
+
+RULES:
+1. Only report what is VISIBLY OBSERVABLE in the image
+2. Do NOT infer information not visible (e.g., don't report "500 people trapped" unless you can see them)
+3. Distinguish OBSERVED from ASSUMED:
+   - OBSERVED: "water covering road", "smoke rising from building", "collapsed roof visible"
+   - ASSUMED: "people trapped inside", "fire spreading rapidly" (unless clearly visible)
+4. If information is unavailable, use null for strings, [] for arrays, or 0.0 for confidence
+5. disaster_type must be one of: flood, wildfire, earthquake, landslide, cyclone, tornado, volcanic_activity, building_collapse, road_blockage, tsunami, hurricane, storm, explosion, chemical_spill, other
+6. disaster_type_confidence: your confidence based on visual evidence (0.0-1.0)
+7. severity_indicators: visual cues of severity (e.g., "water level above car windows", "flames visible through windows", "large structural collapse")
+8. location_mentions: any visible signs, landmarks, street names, or text in image
+9. damage_observed: specific visible damage (e.g., "flooded streets", "burned vegetation", "cracked pavement", "collapsed walls")
+10. people_affected: only if people are visibly in distress, being rescued, or evacuating - describe what you see
+11. vehicles_observed: visible vehicles (e.g., "submerged cars", "emergency vehicles present", "abandoned vehicles")
+12. infrastructure_damage: visible damage to roads, bridges, buildings, power lines, etc.
+13. environmental_conditions: visible weather (rain, smoke, darkness), lighting conditions, water level
+14. summary: 2-3 sentence description of what the image shows
+15. evidence_description: "Image analysis showing [key visual elements]"
+
+IMAGE: {{image_description}}
