@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.database import get_db
+from app.core.security import require_role
 from app.config import settings
 from app.models.incident import Incident, IncidentEvent
 from app.models.resource import Resource
@@ -339,6 +340,7 @@ async def update_allocation_status(
     allocation_id: UUID,
     status_update: dict,
     db: AsyncSession = Depends(get_db),
+    _current_user=Depends(require_role(["dispatcher", "commander", "admin"])),
 ):
     """
     Update the status of a resource allocation (approve / reject / cancel).

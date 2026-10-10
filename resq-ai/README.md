@@ -17,6 +17,22 @@
 
 RESQ-AI is an open-source disaster intelligence platform that ingests, validates, and stores multimodal disaster reports for further AI processing. Phase 4 implements an evidence-based investigation system that produces nuanced, traceable assessments of incident credibility.
 
+## Run with Docker
+
+From the `resq-ai` directory, run `docker compose up --build`. This starts PostGIS, the FastAPI backend, and the React frontend. Open `http://localhost:3000`; the backend API is at `http://localhost:8000`.
+
+The database uses the local-development password `postgres` by default. Set `DATABASE_PASSWORD` in a local `.env` file to override it. Docker Compose accepts the `.env` file as optional, so the stack can start with the defaults.
+
+For local development, ensure the root `.env` contains your database credentials, then run `alembic -c backend/alembic.ini upgrade head` from `resq-ai/`. The Docker backend applies migrations automatically before starting.
+
+## Authentication
+
+Register an account at the sign-in screen or use `POST /api/v1/auth/register`; public registration always creates an analyst account. Set a unique `JWT_SECRET_KEY` (at least 32 characters) in `.env` for non-development deployments. Elevated roles must be assigned by a trusted administrator; analysts cannot approve resource allocations.
+
+## External disaster feeds
+
+USGS significant earthquakes and GDACS flood, cyclone, and wildfire alerts are polled every 15 minutes by default. Configure the interval (10–15 minutes) and optional OpenWeatherMap API key in `.env`; weather alerts and high precipitation/wind observations are checked at active incident locations. An authenticated dispatcher, commander, or admin can trigger `POST /api/v1/events/sync-external`. New events are deduplicated, stored with PostGIS locations, and passed to incident clustering. Apply the current database migrations with `alembic -c backend/alembic.ini upgrade head` before starting the API.
+
 ## Architecture
 
 ```
@@ -992,6 +1008,24 @@ POST /copilot/chat
 }
 ```
 
+### Stream a Copilot response
+
+```text
+POST /copilot/sessions/{session_id}/chat/stream
+```
+
+Send `message` and optional `incident_id` as JSON. The response is
+`text/event-stream`; `token` events carry `{"token":"..."}`, followed by a
+`done` event with sources, tool trace, and model metadata. An `error` event
+reports a streaming failure.
+
+### Live event updates
+
+Connect a WebSocket client to `ws://localhost:8000/ws/events` (use `wss://` for
+TLS). Newly created reports are broadcast as JSON messages with type
+`event.created` and an `event` object. The frontend connects automatically and
+updates the Events list and live map layer.
+
 `tools_used` is a *safe* trace: tool name, status, source, and a short note. No SQL, no
 raw payloads, no internal prompt.
 
@@ -1669,4 +1703,3 @@ contain stale model attribute names. See **Known Gaps**.
 - Streaming responses for long answers
 - Tool-calling evaluation suite across more incidents
 - External source verification (news, official feeds)
-

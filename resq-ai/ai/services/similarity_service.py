@@ -26,6 +26,15 @@ class SimilarityComponents:
     disaster_type_match: bool
     disaster_type_score: float
 
+    def to_dict(self) -> dict:
+        return {
+            "semantic_similarity": self.semantic_similarity,
+            "geographic_distance_meters": self.geographic_distance_meters,
+            "temporal_distance_minutes": self.temporal_distance_minutes,
+            "disaster_type_match": self.disaster_type_match,
+            "disaster_type_score": self.disaster_type_score,
+        }
+
 
 @dataclass
 class RelationshipScore:

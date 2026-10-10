@@ -20,7 +20,7 @@ import logging
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional
 from uuid import UUID
 
 from sqlalchemy import select
@@ -329,6 +329,146 @@ class CopilotService:
         answer.incident_id = conversation.incident_id
         return answer
 
+    async def answer_stream(
+        self,
+        session_id: str,
+        message: str,
+        incident_id: Optional[UUID] = None,
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """Stream a grounded answer and persist it after generation completes."""
+        conversation = await self._get_or_create_conversation(session_id, incident_id)
+        sequence = await self._next_sequence(conversation)
+        await self._append_message(conversation, MessageRole.USER, message, sequence)
+        sequence += 1
+
+        history = await self._history(conversation)
+        if history and history[-1].role == MessageRole.USER.value:
+            history.pop()
+
+        if self._looks_like_prohibited_request(message):
+            answer = await self._operational_redirect(conversation.incident_id, history)
+            if answer is not None:
+                async for token in self._text_chunks(answer.answer):
+                    yield {"type": "token", "token": token}
+                await self._persist_streamed_answer(conversation, answer, sequence)
+                yield {"type": "done", **self._stream_metadata(answer)}
+                return
+
+        prompt: List[Message] = [
+            Message(role="system", content=load_system_prompt()),
+            *history,
+            Message(role="user", content=message),
+        ]
+        trace: List[ToolTraceEntry] = []
+        sources: List[str] = []
+        uncertainty: List[str] = []
+        model_name = self.client.model_name
+        answer_text = ""
+
+        with use_session(self._db):
+            for _ in range(MAX_TOOL_ITERATIONS):
+                response = await self.client.chat_completion(
+                    messages=prompt,
+                    tools=tool_registry.definitions(),
+                )
+                if response.tool_calls:
+                    prompt.append(
+                        Message(
+                            role="assistant",
+                            content=response.content or "",
+                            tool_calls=response.tool_calls,
+                        )
+                    )
+                    for call in response.tool_calls:
+                        rendered, entry, _ = await self._run_tool(
+                            call, conversation.incident_id
+                        )
+                        trace.append(entry)
+                        if entry.source and entry.source not in sources:
+                            sources.append(entry.source)
+                        if entry.note and entry.note not in uncertainty:
+                            uncertainty.append(entry.note)
+                        prompt.append(
+                            Message(
+                                role="tool",
+                                content=rendered,
+                                name=entry.tool,
+                                tool_call_id=call.get("id"),
+                            )
+                        )
+                    continue
+
+                async for token in self.client.chat_completion_stream(
+                    messages=prompt,
+                    tools=None,
+                ):
+                    if token:
+                        answer_text += token
+                        yield {"type": "token", "token": token}
+                if not answer_text:
+                    answer_text = response.content or (
+                        "The copilot could not produce an answer from the available data."
+                    )
+                    async for token in self._text_chunks(answer_text):
+                        yield {"type": "token", "token": token}
+                break
+            else:
+                answer_text = (
+                    "I could not complete this request within the allowed number of "
+                    "data lookups. Please narrow the question or ask about one aspect at a time."
+                )
+                async for token in self._text_chunks(answer_text):
+                    yield {"type": "token", "token": token}
+
+        answer = CopilotAnswer(
+            answer=answer_text,
+            sources=sources,
+            tools_used=trace,
+            incident_id=conversation.incident_id,
+            model_name=model_name,
+            uncertainty=uncertainty,
+        )
+        await self._persist_streamed_answer(conversation, answer, sequence)
+        yield {"type": "done", **self._stream_metadata(answer)}
+
+    async def _persist_streamed_answer(
+        self,
+        conversation: CopilotConversation,
+        answer: CopilotAnswer,
+        sequence: int,
+    ) -> None:
+        await self._append_message(
+            conversation,
+            MessageRole.ASSISTANT,
+            answer.answer,
+            sequence,
+            tool_output={
+                "tools_used": [entry.to_dict() for entry in answer.tools_used],
+                "sources": answer.sources,
+            },
+        )
+        await self._db.commit()
+
+    @staticmethod
+    def _stream_metadata(answer: CopilotAnswer) -> Dict[str, Any]:
+        return {
+            "incident_id": str(answer.incident_id) if answer.incident_id else None,
+            "sources": answer.sources,
+            "tools_used": [entry.to_dict() for entry in answer.tools_used],
+            "uncertainty": answer.uncertainty,
+            "model_name": answer.model_name,
+            "refused_action": answer.refused,
+        }
+
+    @staticmethod
+    async def _text_chunks(text: str) -> AsyncGenerator[str, None]:
+        import asyncio
+        import re
+
+        for chunk in re.findall(r"\S+\s*", text):
+            yield chunk
+            await asyncio.sleep(0)
+
     async def _run_turn(
         self,
         message: str,
@@ -393,7 +533,14 @@ class CopilotService:
                     sources.append(entry.source)
                 if entry.note and entry.note not in uncertainty:
                     uncertainty.append(entry.note)
-                conversation.append(Message(role="tool", content=rendered, name=entry.tool))
+                conversation.append(
+                    Message(
+                        role="tool",
+                        content=rendered,
+                        name=entry.tool,
+                        tool_call_id=call.get("id"),
+                    )
+                )
 
         logger.warning("Copilot tool loop hit the iteration cap (%d)", MAX_TOOL_ITERATIONS)
         return CopilotAnswer(

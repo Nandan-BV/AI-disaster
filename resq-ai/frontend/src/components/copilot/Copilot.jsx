@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import CopilotMessage from './CopilotMessage';
 import IncidentContextPanel from './IncidentContextPanel';
 import ToolPermissionList from './ToolPermissionList';
+import { apiFetch } from '../../api';
 
 const API_BASE = '/api/v1';
 
@@ -27,7 +28,7 @@ function Copilot({ incidents = [] }) {
     setToolsLoading(true);
     setToolsError(null);
     try {
-      const response = await fetch(`${API_BASE}/copilot/tools`);
+      const response = await apiFetch(`${API_BASE}/copilot/tools`);
       if (response.ok) {
         setToolsInfo(await response.json());
       } else {
@@ -61,46 +62,95 @@ function Copilot({ incidents = [] }) {
       uncertainty: [],
       refused_action: false,
     };
-    setMessages(prev => [...prev, outgoing]);
+    const assistantId = `c-${Date.now()}`;
+    setMessages(prev => [
+      ...prev,
+      outgoing,
+      {
+        id: assistantId,
+        role: 'assistant',
+        content: '',
+        sources: [],
+        tools_used: [],
+        uncertainty: [],
+        refused_action: false,
+      },
+    ]);
 
     try {
-      const response = await fetch(`${API_BASE}/copilot/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: sessionId,
-          incident_id: selectedIncident ? selectedIncident.id : null,
-          message,
-        }),
-      });
+      const response = await apiFetch(
+        `${API_BASE}/copilot/sessions/${encodeURIComponent(sessionId)}/chat/stream`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            incident_id: selectedIncident ? selectedIncident.id : null,
+            message,
+          }),
+        }
+      );
 
-      if (response.ok) {
-        const data = await response.json();
-        setMessages(prev => [
-          ...prev,
-          {
-            id: `c-${Date.now()}`,
-            role: 'assistant',
-            content: data.answer,
-            sources: data.sources || [],
-            tools_used: data.tools_used || [],
-            uncertainty: data.uncertainty || [],
-            refused_action: data.refused_action,
-            model_name: data.model_name,
-          },
-        ]);
-      } else if (response.status === 503) {
+      if (!response.ok) {
         const detail = await response.json().catch(() => ({}));
-        setError(
+        throw new Error(
           detail.detail ||
-            'The copilot is currently unavailable. No answer was generated.'
+            (response.status === 503
+              ? 'The copilot is currently unavailable. No answer was generated.'
+              : `Request failed (${response.status}).`)
         );
-      } else {
-        const detail = await response.json().catch(() => ({}));
-        setError(detail.detail || `Request failed (${response.status}).`);
       }
+
+      if (!response.body) throw new Error('The browser cannot read the copilot stream.');
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      const handleFrame = (frame) => {
+        let eventType = 'message';
+        const dataLines = [];
+        frame.split(/\r?\n/).forEach(line => {
+          if (line.startsWith('event:')) eventType = line.slice(6).trim();
+          if (line.startsWith('data:')) dataLines.push(line.slice(5).trim());
+        });
+        if (!dataLines.length) return;
+
+        const data = JSON.parse(dataLines.join('\n'));
+        if (eventType === 'token') {
+          setMessages(prev => prev.map(item => (
+            item.id === assistantId
+              ? { ...item, content: item.content + (data.token || '') }
+              : item
+          )));
+        } else if (eventType === 'done') {
+          setMessages(prev => prev.map(item => (
+            item.id === assistantId
+              ? {
+                  ...item,
+                  sources: data.sources || [],
+                  tools_used: data.tools_used || [],
+                  uncertainty: data.uncertainty || [],
+                  refused_action: Boolean(data.refused_action),
+                  model_name: data.model_name,
+                }
+              : item
+          )));
+        } else if (eventType === 'error') {
+          throw new Error(data.detail || 'The copilot stream failed.');
+        }
+      };
+
+      while (true) {
+        const { value, done } = await reader.read();
+        buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+        const frames = buffer.split(/\r?\n\r?\n/);
+        buffer = frames.pop() || '';
+        frames.forEach(handleFrame);
+        if (done) break;
+      }
+      if (buffer.trim()) handleFrame(buffer);
     } catch (err) {
       setError(err.message);
+      setMessages(prev => prev.filter(item => item.id !== assistantId || item.content));
     } finally {
       setSending(false);
     }
@@ -111,7 +161,7 @@ function Copilot({ incidents = [] }) {
     setError(null);
     if (!sessionId) return;
     try {
-      await fetch(`${API_BASE}/copilot/conversations/${encodeURIComponent(sessionId)}`, {
+      await apiFetch(`${API_BASE}/copilot/conversations/${encodeURIComponent(sessionId)}`, {
         method: 'DELETE',
       });
     } catch (err) {
@@ -165,7 +215,7 @@ function Copilot({ incidents = [] }) {
               <CopilotMessage key={message.id} message={message} />
             ))}
 
-            {sending && (
+            {sending && !messages[messages.length - 1]?.content && (
               <div className="copilot-message from-copilot">
                 <div className="copilot-message-role">Copilot</div>
                 <div className="copilot-message-body">

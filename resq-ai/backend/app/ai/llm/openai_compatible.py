@@ -67,7 +67,19 @@ class OpenAICompatibleClient(LLMClient):
             if m.tool_call_id:
                 entry["tool_call_id"] = m.tool_call_id
             if m.tool_calls:
-                entry["tool_calls"] = m.tool_calls
+                entry["tool_calls"] = [
+                    call
+                    if "function" in call
+                    else {
+                        "id": call.get("id"),
+                        "type": "function",
+                        "function": {
+                            "name": call.get("name"),
+                            "arguments": call.get("arguments") or "{}",
+                        },
+                    }
+                    for call in m.tool_calls
+                ]
             payload.append(entry)
         return payload
 

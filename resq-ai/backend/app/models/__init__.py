@@ -18,6 +18,7 @@ from app.models.resource import Resource, ResourceType, ResourceStatus
 from app.models.copilot import (
     CopilotConversation, CopilotMessage, MessageRole,
 )
+from app.models.user import User, UserRole
 
 __all__ = [
     "Event", "EventAIAnalysis", "Incident", "IncidentEvent", "IncidentStatus",
@@ -31,4 +32,5 @@ __all__ = [
     "AllocationStatus",
     "Resource", "ResourceType", "ResourceStatus",
     "CopilotConversation", "CopilotMessage", "MessageRole",
+    "User", "UserRole",
 ]

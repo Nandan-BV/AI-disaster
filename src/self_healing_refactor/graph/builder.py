@@ -1,4 +1,5 @@
-from langgraph.graph import StateGraph, START, END, Send
+from langgraph.graph import StateGraph, START, END
+from langgraph.types import Send
 
 from ..state.schemas import RefactorState, ModuleState
 from ..nodes.ast_scanner import ast_scanner_node
@@ -38,6 +39,7 @@ def build_refactor_graph(max_retries: int = 3) -> StateGraph:
     graph = StateGraph(RefactorState)
 
     graph.add_node("ast_scanner_node", ast_scanner_node)
+    graph.add_node("refactor_worker", parallel_refactor_worker)
     graph.add_node("patch_applier_node", patch_applier_node)
     graph.add_node("pytest_validation_node", pytest_validation_node)
 

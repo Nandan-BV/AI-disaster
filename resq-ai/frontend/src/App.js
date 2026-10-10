@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 import MapView from './MapView';
 import Copilot from './components/copilot/Copilot';
+import OptimizationDashboard from './components/optimization/OptimizationDashboard';
+import AuthPanel from './components/auth/AuthPanel';
+import { apiFetch } from './api';
 
 const API_BASE = '/api/v1';
 
@@ -33,12 +36,14 @@ const resourceStatusColors = {
 };
 
 function App() {
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authChecking, setAuthChecking] = useState(true);
   const [backendStatus, setBackendStatus] = useState('checking');
   const [events, setEvents] = useState([]);
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [incidentsLoading, setIncidentsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('events'); // 'events', 'incidents', 'investigation', 'risk'
+  const [activeTab, setActiveTab] = useState('events');
   const [formData, setFormData] = useState({
     source: 'social_media',
     text_content: '',
@@ -88,13 +93,94 @@ function App() {
 
   useEffect(() => {
     checkBackend();
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const token = window.localStorage.getItem('resq-ai-access-token');
+    if (!token) {
+      setAuthChecking(false);
+      return undefined;
+    }
+
+    apiFetch(`${API_BASE}/auth/me`)
+      .then(async response => {
+        if (!response.ok) throw new Error('Stored session is no longer valid.');
+        const user = await response.json();
+        if (active) setCurrentUser(user);
+      })
+      .catch(() => {
+        window.localStorage.removeItem('resq-ai-access-token');
+      })
+      .finally(() => {
+        if (active) setAuthChecking(false);
+      });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    const expireSession = () => {
+      window.localStorage.removeItem('resq-ai-access-token');
+      setCurrentUser(null);
+    };
+    window.addEventListener('resq-ai-auth-expired', expireSession);
+    return () => window.removeEventListener('resq-ai-auth-expired', expireSession);
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser) return;
     fetchEvents();
     fetchIncidents();
-  }, []);
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) return undefined;
+    let socket;
+    let reconnectTimer;
+    let stopped = false;
+
+    const connect = () => {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      socket = new WebSocket(`${protocol}//${window.location.host}/ws/events`);
+      socket.onmessage = (message) => {
+        try {
+          const payload = JSON.parse(message.data);
+          if (payload.type !== 'event.created' || !payload.event?.id) return;
+          const event = payload.event;
+          setEvents(previous => {
+            const merged = new Map([
+              ...previous.map(item => [item.id, item]),
+              [event.id, event],
+            ]);
+            return [...merged.values()]
+              .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+              .slice(0, 100);
+          });
+          fetchIncidents();
+        } catch (error) {
+          console.error('Received an invalid live-event update:', error);
+        }
+      };
+      socket.onerror = (error) => {
+        console.error('Live event WebSocket encountered an error:', error);
+        socket.close();
+      };
+      socket.onclose = () => {
+        if (!stopped) reconnectTimer = window.setTimeout(connect, 2000);
+      };
+    };
+
+    connect();
+    return () => {
+      stopped = true;
+      window.clearTimeout(reconnectTimer);
+      socket?.close();
+    };
+  }, [currentUser]);
 
   const checkBackend = async () => {
     try {
-      const response = await fetch(`${API_BASE}/health`);
+      const response = await apiFetch(`${API_BASE}/health`);
       if (response.ok) {
         setBackendStatus('connected');
       } else {
@@ -108,10 +194,17 @@ function App() {
   const fetchEvents = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/events`);
+      const response = await apiFetch(`${API_BASE}/events`);
       if (response.ok) {
         const data = await response.json();
-        setEvents(data.events || []);
+        setEvents(previous => {
+          const merged = new Map(
+            [...(data.events || []), ...previous].map(event => [event.id, event])
+          );
+          return [...merged.values()]
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+            .slice(0, 100);
+        });
       }
     } catch (error) {
       console.error('Failed to fetch events:', error);
@@ -123,7 +216,7 @@ function App() {
   const fetchIncidents = async () => {
     setIncidentsLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/incidents`);
+      const response = await apiFetch(`${API_BASE}/incidents`);
       if (response.ok) {
         const data = await response.json();
         setIncidents(data.incidents || []);
@@ -159,7 +252,7 @@ function App() {
     };
 
     try {
-      const response = await fetch(`${API_BASE}/events`, {
+      const response = await apiFetch(`${API_BASE}/events`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -183,7 +276,7 @@ function App() {
   const deleteEvent = async (id) => {
     if (!window.confirm('Delete this event?')) return;
     try {
-      const response = await fetch(`${API_BASE}/events/${id}`, { method: 'DELETE' });
+      const response = await apiFetch(`${API_BASE}/events/${id}`, { method: 'DELETE' });
       if (response.ok) {
         fetchEvents();
         if (selectedEvent?.id === id) {
@@ -206,7 +299,7 @@ function App() {
     setAnalysisLoading(true);
     setAnalysisError(null);
     try {
-      const response = await fetch(`${API_BASE}/events/${event.id}/analyze`, {
+      const response = await apiFetch(`${API_BASE}/events/${event.id}/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -230,7 +323,7 @@ function App() {
     setAnalysisLoading(true);
     setAnalysisError(null);
     try {
-      const response = await fetch(`${API_BASE}/events/${event.id}/analysis`);
+      const response = await apiFetch(`${API_BASE}/events/${event.id}/analysis`);
       if (response.ok) {
         const data = await response.json();
         setAnalysisResult(data);
@@ -260,7 +353,7 @@ function App() {
     setInvestigationLoading(true);
     setInvestigationError(null);
     try {
-      const response = await fetch(`${API_BASE}/incidents/${incidentId}/investigation-summary`);
+      const response = await apiFetch(`${API_BASE}/incidents/${incidentId}/investigation-summary`);
       if (response.ok) {
         const data = await response.json();
         setInvestigationResult(data);
@@ -281,7 +374,7 @@ function App() {
     setInvestigationLoading(true);
     setInvestigationError(null);
     try {
-      const response = await fetch(`${API_BASE}/incidents/${incidentId}/investigate`, {
+      const response = await apiFetch(`${API_BASE}/incidents/${incidentId}/investigate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ force_rerun: true }),
@@ -290,7 +383,7 @@ function App() {
       if (response.ok) {
         const data = await response.json();
         // Fetch the full investigation summary
-        const summaryResponse = await fetch(`${API_BASE}/incidents/${incidentId}/investigation-summary`);
+        const summaryResponse = await apiFetch(`${API_BASE}/incidents/${incidentId}/investigation-summary`);
         if (summaryResponse.ok) {
           const summaryData = await summaryResponse.json();
           setInvestigationResult(summaryData);
@@ -310,7 +403,7 @@ function App() {
   const fetchEvidence = async (incidentId) => {
     setEvidenceLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/incidents/${incidentId}/evidence?limit=100`);
+      const response = await apiFetch(`${API_BASE}/incidents/${incidentId}/evidence?limit=100`);
       if (response.ok) {
         const data = await response.json();
         setEvidenceItems(data.evidence || []);
@@ -327,7 +420,7 @@ function App() {
     setRiskError(null);
     setImpactResult(null);
     try {
-      const response = await fetch(`${API_BASE}/incidents/${incidentId}/risk-assessment`, {
+      const response = await apiFetch(`${API_BASE}/incidents/${incidentId}/risk-assessment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -337,13 +430,13 @@ function App() {
         const data = await response.json();
         setRiskResult(data);
         // Also fetch impact
-        const impactResponse = await fetch(`${API_BASE}/incidents/${incidentId}/impact`);
+        const impactResponse = await apiFetch(`${API_BASE}/incidents/${incidentId}/impact`);
         if (impactResponse.ok) {
           const impactData = await impactResponse.json();
           setImpactResult(impactData);
         }
         // Fetch risk history
-        const historyResponse = await fetch(`${API_BASE}/incidents/${incidentId}/risk-history`);
+        const historyResponse = await apiFetch(`${API_BASE}/incidents/${incidentId}/risk-history`);
         if (historyResponse.ok) {
           const historyData = await historyResponse.json();
           setRiskHistory(historyData);
@@ -364,7 +457,7 @@ function App() {
     setRiskLoading(true);
     setRiskError(null);
     try {
-      const response = await fetch(`${API_BASE}/incidents/${incidentId}/risk-assessment/recalculate`, {
+      const response = await apiFetch(`${API_BASE}/incidents/${incidentId}/risk-assessment/recalculate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -374,13 +467,13 @@ function App() {
         const data = await response.json();
         setRiskResult(data);
         // Also fetch impact
-        const impactResponse = await fetch(`${API_BASE}/incidents/${incidentId}/impact`);
+        const impactResponse = await apiFetch(`${API_BASE}/incidents/${incidentId}/impact`);
         if (impactResponse.ok) {
           const impactData = await impactResponse.json();
           setImpactResult(impactData);
         }
         // Fetch risk history
-        const historyResponse = await fetch(`${API_BASE}/incidents/${incidentId}/risk-history`);
+        const historyResponse = await apiFetch(`${API_BASE}/incidents/${incidentId}/risk-history`);
         if (historyResponse.ok) {
           const historyData = await historyResponse.json();
           setRiskHistory(historyData);
@@ -401,7 +494,7 @@ function App() {
     setImpactLoading(true);
     setImpactError(null);
     try {
-      const response = await fetch(`${API_BASE}/incidents/${incidentId}/impact`);
+      const response = await apiFetch(`${API_BASE}/incidents/${incidentId}/impact`);
       if (response.ok) {
         const data = await response.json();
         setImpactResult(data);
@@ -421,7 +514,7 @@ function App() {
   const fetchRiskHistory = async (incidentId) => {
     setRiskHistoryLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/incidents/${incidentId}/risk-history`);
+      const response = await apiFetch(`${API_BASE}/incidents/${incidentId}/risk-history`);
       if (response.ok) {
         const data = await response.json();
         setRiskHistory(data);
@@ -436,7 +529,7 @@ function App() {
   const fetchResources = async () => {
     setResourcesLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/resources`);
+      const response = await apiFetch(`${API_BASE}/resources`);
       if (response.ok) {
         const data = await response.json();
         setResources(data);
@@ -475,7 +568,7 @@ function App() {
         return;
       }
 
-      const response = await fetch(`${API_BASE}/resources`, {
+      const response = await apiFetch(`${API_BASE}/resources`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -497,7 +590,7 @@ function App() {
 
   const updateResourceStatus = async (resourceId, status) => {
     try {
-      const response = await fetch(`${API_BASE}/resources/${resourceId}/status`, {
+      const response = await apiFetch(`${API_BASE}/resources/${resourceId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
@@ -546,6 +639,14 @@ function App() {
     inconclusive: '#757575',
   };
 
+  if (authChecking) {
+    return <main className="auth-page"><section className="section auth-card">Checking your session...</section></main>;
+  }
+
+  if (!currentUser) {
+    return <AuthPanel onAuthenticated={setCurrentUser} />;
+  }
+
   return (
     <div className="app">
       <header className="header">
@@ -553,6 +654,19 @@ function App() {
         <p>Multimodal Disaster Intelligence & Emergency Response Copilot</p>
         <div className="status-indicator">
           Backend: <span style={{ color: statusColors[backendStatus] }}>{backendStatus.toUpperCase()}</span>
+        </div>
+        <div className="auth-user">
+          Signed in as {currentUser.username} ({currentUser.role})
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => {
+              window.localStorage.removeItem('resq-ai-access-token');
+              setCurrentUser(null);
+            }}
+          >
+            Sign out
+          </button>
         </div>
       </header>
 
@@ -580,6 +694,12 @@ function App() {
           onClick={() => setActiveTab('risk')}
         >
           Risk & Impact
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'optimization' ? 'active' : ''}`}
+          onClick={() => setActiveTab('optimization')}
+        >
+          Optimization
         </button>
         <button
           className={`tab-btn ${activeTab === 'map' ? 'active' : ''}`}
@@ -1128,23 +1248,28 @@ function App() {
 
         {activeTab === 'copilot' && <Copilot incidents={incidents} />}
 
+        {activeTab === 'optimization' && <OptimizationDashboard incidents={incidents} userRole={currentUser.role} />}
+
         {activeTab === 'map' && (
           <section className="section map-section">
             <h2>Geospatial Map View</h2>
             <p className="map-description">
-              Select an incident from the Incidents tab, then view its geographic context, 
-              analysis area, and nearby infrastructure on the map.
+              Select an incident for its geographic context and nearby infrastructure.
+              Newly reported events also appear live on the map.
             </p>
-            {selectedIncident && (
-              <MapView
-                incidentId={selectedIncident.id}
-                center={[selectedIncident.centroid_longitude, selectedIncident.centroid_latitude]}
-                zoom={13}
-              />
-            )}
+            <MapView
+              incidentId={selectedIncident?.id}
+              center={selectedIncident
+                ? [selectedIncident.centroid_longitude, selectedIncident.centroid_latitude]
+                : events[0]
+                  ? [events[0].longitude, events[0].latitude]
+                  : [77.5946, 12.9716]}
+              zoom={13}
+              liveEvents={events}
+            />
             {!selectedIncident && (
               <div className="no-incident-selected">
-                <p>No incident selected. Go to the <strong>Incidents</strong> tab and click on an incident to view its map.</p>
+                <p>No incident selected. Live report locations are still displayed.</p>
               </div>
             )}
           </section>

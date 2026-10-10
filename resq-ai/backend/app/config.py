@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, model_validator
 from typing import Optional
 
 
@@ -8,6 +8,52 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "RESQ-AI"
     VERSION: str = "0.1.0"
     ENVIRONMENT: str = Field(default="development", alias="ENVIRONMENT")
+    JWT_SECRET_KEY: str = Field(
+        default="development-only-change-this-jwt-secret",
+        alias="JWT_SECRET_KEY",
+    )
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(
+        default=30,
+        alias="JWT_ACCESS_TOKEN_EXPIRE_MINUTES",
+    )
+    EXTERNAL_INGESTION_ENABLED: bool = Field(
+        default=True,
+        alias="EXTERNAL_INGESTION_ENABLED",
+    )
+    EXTERNAL_INGESTION_INTERVAL_MINUTES: int = Field(
+        default=15,
+        ge=10,
+        le=15,
+        alias="EXTERNAL_INGESTION_INTERVAL_MINUTES",
+    )
+    USGS_SIGNIFICANT_FEED_URL: str = Field(
+        default="https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_day.geojson",
+        alias="USGS_SIGNIFICANT_FEED_URL",
+    )
+    GDACS_FEED_URL: str = Field(
+        default="https://www.gdacs.org/xml/rss.xml",
+        alias="GDACS_FEED_URL",
+    )
+    OPENWEATHERMAP_API_KEY: Optional[str] = Field(
+        default=None,
+        alias="OPENWEATHERMAP_API_KEY",
+    )
+    OPENWEATHERMAP_API_URL: str = Field(
+        default="https://api.openweathermap.org/data/3.0/onecall",
+        alias="OPENWEATHERMAP_API_URL",
+    )
+
+    @model_validator(mode="after")
+    def validate_jwt_secret(self):
+        if self.ENVIRONMENT.lower() not in {"development", "dev", "test"} and (
+            self.JWT_SECRET_KEY == "development-only-change-this-jwt-secret"
+            or len(self.JWT_SECRET_KEY) < 32
+        ):
+            raise ValueError(
+                "Set JWT_SECRET_KEY to a unique secret of at least 32 characters "
+                "outside development."
+            )
+        return self
     
     # API
     API_V1_PREFIX: str = "/api/v1"

@@ -19,6 +19,7 @@ class EventService:
         
         event = Event(
             source=event_data.source,
+            external_id=event_data.external_id,
             text_content=event_data.text_content,
             event_type=event_data.event_type,
             latitude=event_data.latitude,

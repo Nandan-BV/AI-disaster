@@ -117,6 +117,7 @@ def fallback_investigation(
     support_weight = sum(e.confidence or 0 for e in supporting)
     contradict_weight = sum(e.confidence or 0 for e in contradicting)
     uncertain_weight = sum(e.confidence or 0 for e in uncertain)
+    neutral_weight = sum(e.confidence or 0 for e in neutral)
 
     # Component scores
     components = [

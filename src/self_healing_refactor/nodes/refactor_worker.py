@@ -1,14 +1,13 @@
-import os
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from ..state.schemas import ModuleState, RefactorState
+from ..state.schemas import ModuleState
 from ..utils.llm_prompts import REFACTOR_SYSTEM_PROMPT, REFACTOR_USER_PROMPT_TEMPLATE
 
 
-def parallel_refactor_worker(state: ModuleState) -> Dict[str, str]:
+def parallel_refactor_worker(state: ModuleState) -> Dict[str, Dict[str, str]]:
     """Refactor a single module using LLM, incorporating test failure feedback."""
     module_path = state["module_path"]
     repository_path = state["repository_path"]
@@ -16,7 +15,7 @@ def parallel_refactor_worker(state: ModuleState) -> Dict[str, str]:
 
     full_path = Path(repository_path) / module_path
     if not full_path.exists():
-        return {}
+        return {"file_patches": {}}
 
     with open(full_path, "r", encoding="utf-8") as f:
         original_code = f.read()
@@ -25,7 +24,8 @@ def parallel_refactor_worker(state: ModuleState) -> Dict[str, str]:
     for test_file, result in test_results.items():
         if result.get("failed", False):
             traceback = result.get("traceback", "")
-            if module_path.replace("/", ".").replace(".py", "") in traceback:
+            module_name = ".".join(Path(module_path).with_suffix("").parts)
+            if module_name in traceback:
                 relevant_failures.append({
                     "test_file": test_file,
                     "traceback": traceback,
@@ -51,5 +51,5 @@ def parallel_refactor_worker(state: ModuleState) -> Dict[str, str]:
     refactored_code = refactored_code.strip()
 
     if refactored_code != original_code:
-        return {module_path: refactored_code}
-    return {}
+        return {"file_patches": {module_path: refactored_code}}
+    return {"file_patches": {}}

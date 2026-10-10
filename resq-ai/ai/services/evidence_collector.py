@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 class CollectedEvidence:
     """Container for collected evidence from an event."""
     event_id: UUID
+    incident_id: UUID
     event_text: Optional[str] = None
     event_source: Optional[str] = None
     event_timestamp: Optional[datetime] = None
@@ -100,6 +101,7 @@ async def collect_incident_evidence(incident_id: UUID, db: AsyncSession) -> Inci
 
         collected = CollectedEvidence(
             event_id=event.id,
+            incident_id=incident_id,
             event_text=event.text_content,
             event_source=event.source,
             event_timestamp=event.timestamp,

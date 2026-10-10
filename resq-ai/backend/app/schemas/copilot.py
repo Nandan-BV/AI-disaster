@@ -30,6 +30,15 @@ class CopilotChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
 
 
+class CopilotChatStreamRequest(BaseModel):
+    """Body for ``POST /copilot/sessions/{session_id}/chat/stream``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    incident_id: Optional[UUID] = None
+    message: str = Field(min_length=1, max_length=4000)
+
+
 class ToolTrace(BaseModel):
     """One entry in the safe tool trace."""
 

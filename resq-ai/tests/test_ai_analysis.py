@@ -190,26 +190,32 @@ class TestVideoAnalyzer:
 
 class TestMultimodalAnalyzer:
     @pytest.fixture
-    def mock_model_manager(self):
-        with patch("ai.services.multimodal_analyzer.model_manager") as mock:
-            mock_model = MockModel()
-            mock.get_model.return_value = mock_model
-            mock.load_model.return_value = mock_model
-            yield mock
+    def mock_analyzers(self):
+        with patch(
+            "ai.services.multimodal_analyzer.analyze_text",
+            return_value=MOCK_TEXT_ANALYSIS,
+        ) as text_analyzer, patch(
+            "ai.services.multimodal_analyzer.analyze_image",
+            return_value=MOCK_IMAGE_ANALYSIS,
+        ) as image_analyzer, patch(
+            "ai.services.multimodal_analyzer.analyze_video",
+            return_value=MOCK_VIDEO_ANALYSIS,
+        ) as video_analyzer:
+            yield text_analyzer, image_analyzer, video_analyzer
 
-    def test_analyze_text_only(self, mock_model_manager):
+    def test_analyze_text_only(self, mock_analyzers):
         result = analyze_multimodal(text="Flood reported")
         assert result.disaster_type == "flood"
         assert "text" in result.evidence_description
 
-    def test_analyze_image_only(self, mock_model_manager, tmp_path):
+    def test_analyze_image_only(self, mock_analyzers, tmp_path):
         test_image = tmp_path / "test.jpg"
         test_image.write_bytes(b"fake")
         result = analyze_multimodal(image_path=str(test_image))
         assert result.disaster_type == "flood"
         assert "image" in result.evidence_description
 
-    def test_analyze_video_only(self, mock_model_manager, tmp_path):
+    def test_analyze_video_only(self, mock_analyzers, tmp_path):
         test_video = tmp_path / "test.mp4"
         test_video.write_bytes(b"fake")
         with patch("ai.services.video_analyzer.extract_frames") as mock_extract:
@@ -218,7 +224,7 @@ class TestMultimodalAnalyzer:
             assert result.disaster_type == "wildfire"
             assert "video" in result.evidence_description
 
-    def test_analyze_text_and_image(self, mock_model_manager, tmp_path):
+    def test_analyze_text_and_image(self, mock_analyzers, tmp_path):
         test_image = tmp_path / "test.jpg"
         test_image.write_bytes(b"fake")
         result = analyze_multimodal(text="Flood", image_path=str(test_image))
@@ -226,7 +232,7 @@ class TestMultimodalAnalyzer:
         assert "text" in result.evidence_description
         assert "image" in result.evidence_description
 
-    def test_analyze_all_three(self, mock_model_manager, tmp_path):
+    def test_analyze_all_three(self, mock_analyzers, tmp_path):
         test_image = tmp_path / "test.jpg"
         test_image.write_bytes(b"fake")
         test_video = tmp_path / "test.mp4"
@@ -242,21 +248,27 @@ class TestMultimodalAnalyzer:
             assert "image" in result.evidence_description
             assert "video" in result.evidence_description
 
-    def test_analyze_no_content(self, mock_model_manager):
+    def test_analyze_no_content(self, mock_analyzers):
         result = analyze_multimodal()
         assert result.summary == "No analyzable content provided"
 
 
 class TestEventAnalyzer:
     @pytest.fixture
-    def mock_model_manager(self):
-        with patch("ai.services.multimodal_analyzer.model_manager") as mock:
-            mock_model = MockModel()
-            mock.get_model.return_value = mock_model
-            mock.load_model.return_value = mock_model
-            yield mock
+    def mock_analyzers(self):
+        with patch(
+            "ai.services.multimodal_analyzer.analyze_text",
+            return_value=MOCK_TEXT_ANALYSIS,
+        ) as text_analyzer, patch(
+            "ai.services.multimodal_analyzer.analyze_image",
+            return_value=MOCK_IMAGE_ANALYSIS,
+        ) as image_analyzer, patch(
+            "ai.services.multimodal_analyzer.analyze_video",
+            return_value=MOCK_VIDEO_ANALYSIS,
+        ) as video_analyzer:
+            yield text_analyzer, image_analyzer, video_analyzer
 
-    def test_analyze_event_with_text(self, mock_model_manager):
+    def test_analyze_event_with_text(self, mock_analyzers):
         class MockEvent:
             text_content = "Flood reported"
             image_url = None
@@ -266,7 +278,7 @@ class TestEventAnalyzer:
         result = analyzer.analyze_event(MockEvent())
         assert result.disaster_type == "flood"
 
-    def test_analyze_event_override_text(self, mock_model_manager):
+    def test_analyze_event_override_text(self, mock_analyzers):
         class MockEvent:
             text_content = "Original text"
             image_url = None
