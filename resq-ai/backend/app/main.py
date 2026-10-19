@@ -1,16 +1,56 @@
 from contextlib import asynccontextmanager
+import asyncio
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
+<<<<<<< HEAD
 from app.database import init_db, close_db
 from app.api import health, events, analysis, incidents, investigation, geospatial, risk, resources, copilot, optimization, dashboard
+=======
+from app.database import AsyncSessionLocal, close_db
+from app.services.external_ingestion import poll_external_feeds
+from app.api import auth, health, events, analysis, incidents, investigation, geospatial, risk, resources, copilot, optimization
+
+logger = logging.getLogger(__name__)
+
+
+async def _run_external_ingestion_scheduler() -> None:
+    interval_seconds = settings.EXTERNAL_INGESTION_INTERVAL_MINUTES * 60
+    while True:
+        await asyncio.sleep(interval_seconds)
+        try:
+            async with AsyncSessionLocal() as db:
+                result = await poll_external_feeds(db)
+            if any(
+                source.get("status") == "error"
+                for source in result["sources"].values()
+            ):
+                logger.error("One or more external disaster feeds failed: %s", result)
+            else:
+                logger.info("External disaster feed poll completed: %s", result)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Unexpected error while polling external disaster feeds.")
+>>>>>>> origin/main
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_db()
-    yield
-    await close_db()
+    ingestion_task = None
+    if settings.EXTERNAL_INGESTION_ENABLED:
+        ingestion_task = asyncio.create_task(_run_external_ingestion_scheduler())
+    try:
+        yield
+    finally:
+        if ingestion_task is not None:
+            ingestion_task.cancel()
+            try:
+                await ingestion_task
+            except asyncio.CancelledError:
+                pass
+        await close_db()
 
 
 app = FastAPI(
@@ -28,7 +68,9 @@ app.add_middleware(
 )
 
 app.include_router(health.router, prefix=settings.API_V1_PREFIX)
+app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(events.router, prefix=settings.API_V1_PREFIX)
+app.include_router(events.websocket_router)
 app.include_router(analysis.router, prefix=settings.API_V1_PREFIX)
 app.include_router(geospatial.router, prefix=settings.API_V1_PREFIX)
 app.include_router(incidents.router, prefix=settings.API_V1_PREFIX)

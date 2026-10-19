@@ -17,6 +17,7 @@ Two correctness details this module exists to get right:
 import asyncio
 import json
 import logging
+import queue
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from app.ai.llm.base import (
@@ -199,12 +200,74 @@ class TransformersLocalClient(LLMClient):
         max_tokens: Optional[int] = None,
         top_p: Optional[float] = None,
     ) -> AsyncGenerator[str, None]:
-        """Token streaming is not supported in-process; emit a single chunk."""
-        response = await self.chat_completion(messages, tools, temperature, max_tokens, top_p)
-        if response.tool_calls:
-            yield "[tool call pending]"
-            return
-        yield response.content
+        """Generate tokens on a worker thread and yield them as they arrive."""
+        await self._load_async()
+        try:
+            from transformers import TextIteratorStreamer
+
+            chat = self._serialize(messages)
+            if tools:
+                chat[-1]["content"] += (
+                    "\n\nYou may call these tools. Tool schemas:\n"
+                    + json.dumps([tool.to_openai_schema() for tool in tools], indent=2)
+                    + '\nRespond with a single JSON object: '
+                    '{"tool": "<name>", "arguments": {...}} or {"content": "..."}.'
+                )
+            prompt = self._tokenizer.apply_chat_template(
+                chat, tokenize=False, add_generation_prompt=True
+            )
+            inputs = self._tokenizer([prompt], return_tensors="pt").to(self._device)
+            streamer = TextIteratorStreamer(
+                self._tokenizer,
+                skip_prompt=True,
+                skip_special_tokens=True,
+                timeout=0.2,
+            )
+            generation = asyncio.create_task(
+                asyncio.to_thread(
+                    self._model.generate,
+                    **inputs,
+                    streamer=streamer,
+                    max_new_tokens=(
+                        settings.COPILOT_MAX_TOKENS if max_tokens is None else max_tokens
+                    ),
+                    temperature=(
+                        settings.COPILOT_TEMPERATURE if temperature is None else temperature
+                    ),
+                    top_p=settings.COPILOT_TOP_P if top_p is None else top_p,
+                    do_sample=settings.COPILOT_DO_SAMPLE,
+                    pad_token_id=self._tokenizer.pad_token_id
+                    or self._tokenizer.eos_token_id,
+                )
+            )
+            chunks = iter(streamer)
+            while True:
+                available, chunk = await asyncio.to_thread(
+                    self._next_stream_chunk, chunks
+                )
+                if not available:
+                    if generation.done():
+                        await generation
+                    continue
+                if chunk is None:
+                    break
+                if chunk:
+                    yield chunk
+            await generation
+        except CopilotLLMError:
+            raise
+        except Exception as exc:  # pragma: no cover - model/runtime dependent
+            logger.exception("Local copilot streaming failed")
+            raise CopilotLLMError("The AI copilot is temporarily unavailable.") from exc
+
+    @staticmethod
+    def _next_stream_chunk(iterator: Any) -> tuple[bool, Optional[str]]:
+        try:
+            return True, next(iterator)
+        except StopIteration:
+            return True, None
+        except queue.Empty:
+            return False, None
 
     def unload(self) -> None:
         """Free model memory. Safe to call when nothing is loaded."""

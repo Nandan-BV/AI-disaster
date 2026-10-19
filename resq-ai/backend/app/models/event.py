@@ -13,6 +13,7 @@ class Event(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     source = Column(String(100), nullable=False, index=True)
+    external_id = Column(String(255), nullable=True)
     text_content = Column(Text, nullable=True)
     event_type = Column(String(50), nullable=True, index=True)
     latitude = Column(Float, nullable=False)
@@ -27,6 +28,7 @@ class Event(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     __table_args__ = (
+        Index("uq_events_source_external_id", "source", "external_id", unique=True),
         Index("ix_events_timestamp_desc", timestamp.desc()),
         Index("ix_events_location", "location", postgresql_using="gist"),
     )

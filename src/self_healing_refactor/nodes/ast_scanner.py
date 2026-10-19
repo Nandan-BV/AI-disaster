@@ -1,5 +1,4 @@
 import ast
-import os
 from pathlib import Path
 from typing import Any, Dict, List, Set
 
@@ -29,7 +28,7 @@ class ModuleVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
 
-def resolve_module_path(import_name: str, repository_root: Path, current_module_dir: Path) -> str | None:
+def resolve_module_path(import_name: str, repository_root: Path) -> str | None:
     """Resolve an import name to a file path within the repository."""
     parts = import_name.split(".")
     for i in range(len(parts), 0, -1):
@@ -66,16 +65,24 @@ def build_dependency_map(repository_path: str) -> Dict[str, List[str]]:
 
         dependencies: List[str] = []
         for imp in visitor.imports:
-            resolved = resolve_module_path(imp, repo_root, py_file.parent)
+            resolved = resolve_module_path(imp, repo_root)
             if resolved:
                 dependencies.append(resolved)
 
         for mod, names in visitor.from_imports.items():
-            resolved = resolve_module_path(mod, repo_root, py_file.parent)
-            if resolved:
-                dependencies.append(resolved)
+            imported_modules = [
+                resolved
+                for name in names
+                if (resolved := resolve_module_path(f"{mod}.{name}", repo_root))
+            ]
+            if imported_modules:
+                dependencies.extend(imported_modules)
+            else:
+                resolved = resolve_module_path(mod, repo_root)
+                if resolved:
+                    dependencies.append(resolved)
 
-        dependency_map[relative_path] = dependencies
+        dependency_map[relative_path] = sorted(set(dependencies))
 
     return dependency_map
 
@@ -84,11 +91,12 @@ def get_modules_to_refactor(dependency_map: Dict[str, List[str]], test_results: 
     """Determine which modules need refactoring based on test failures."""
     failed_modules: Set[str] = set()
 
-    for test_file, result in test_results.items():
+    for result in test_results.values():
         if result.get("failed", False):
             traceback = result.get("traceback", "")
             for module in dependency_map:
-                if module.replace("/", ".").replace(".py", "") in traceback:
+                module_name = ".".join(Path(module).with_suffix("").parts)
+                if module_name in traceback:
                     failed_modules.add(module)
 
     if not failed_modules:

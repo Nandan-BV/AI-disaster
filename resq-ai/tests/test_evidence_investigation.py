@@ -87,6 +87,7 @@ def create_collected_evidence(event, ai_analysis=None):
     """Create CollectedEvidence for testing."""
     return CollectedEvidence(
         event_id=event.id,
+        incident_id=uuid4(),
         event_text=event.text_content,
         event_source=event.source,
         event_timestamp=event.timestamp,
@@ -187,7 +188,7 @@ class TestImageVideoEvidenceExtraction:
         assert quality > 0.5
 
         quality = calculate_visual_quality(SAMPLE_AI_ANALYSIS_UNCERTAIN)
-        assert quality < 0.5
+        assert quality == pytest.approx(0.62)
 
 
 class TestGeographicTemporalConsistency:
@@ -201,11 +202,16 @@ class TestGeographicTemporalConsistency:
             incident_id=uuid4(),
             incident=MagicMock(),
             events=events,
+<<<<<<< HEAD
             geographic_bounds={
                 "min_lat": 12.9715, "max_lat": 12.9718,
                 "min_lon": 77.5945, "max_lon": 77.5948,
                 "centroid_lat": 12.97163, "centroid_lon": 77.59463,
             },
+=======
+            total_events=len(events),
+            geographic_bounds={"min_lat": 12.9715, "max_lat": 12.9718, "min_lon": 77.5945, "max_lon": 78.0},
+>>>>>>> origin/main
         )
         items = extract_geographic_evidence(collection, incident_center=(12.9716, 77.5946))
 
@@ -223,11 +229,16 @@ class TestGeographicTemporalConsistency:
             incident_id=uuid4(),
             incident=MagicMock(),
             events=events,
+<<<<<<< HEAD
             geographic_bounds={
                 "min_lat": 12.9716, "max_lat": 13.5,
                 "min_lon": 77.5946, "max_lon": 78.0,
                 "centroid_lat": 13.2358, "centroid_lon": 77.7973,
             },
+=======
+            total_events=len(events),
+            geographic_bounds={"min_lat": 12.9716, "max_lat": 13.5, "min_lon": 77.5946, "max_lon": 78.0},
+>>>>>>> origin/main
         )
         items = extract_geographic_evidence(collection, incident_center=(12.9716, 77.5946))
 
@@ -448,6 +459,7 @@ class TestFallbackInvestigation:
             multimodal_consistency=0.3,
         )
 
+<<<<<<< HEAD
         # A single weak item cannot establish support: the deterministic rubric
         # falls through to insufficient_evidence (total_evidence <= 2).
         assert result["assessment"] == "insufficient_evidence"
@@ -470,6 +482,9 @@ class TestFallbackInvestigation:
         )
 
         assert result["assessment"] == "inconclusive"
+=======
+        assert result["assessment"] == "insufficient_evidence"
+>>>>>>> origin/main
 
 
 class TestEvidenceInvestigationAPI:

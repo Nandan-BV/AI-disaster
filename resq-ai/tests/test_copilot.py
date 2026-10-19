@@ -8,6 +8,7 @@ the conversation remembers the incident.
 
 from datetime import datetime, timedelta
 from uuid import uuid4
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -285,6 +286,36 @@ async def ask(session, script, message, incident_id=None, history=None):
         message=message, history=history or [], incident_id=incident_id
     )
     return answer, service.client.calls
+
+
+async def test_answer_stream_emits_tokens_and_persists(world):
+    session, incident = world
+    client = ScriptedLLMClient([
+        call("get_incident", incident_id=str(incident.id)),
+        final("Planning response"),
+        final("Live streamed response"),
+    ])
+    service = CopilotService(db=session, client=client)
+    service._next_sequence = AsyncMock(return_value=1)
+
+    events = [
+        event
+        async for event in service.answer_stream(
+            session_id="stream-test",
+            message="What is happening?",
+            incident_id=incident.id,
+        )
+    ]
+
+    assert events[-1]["type"] == "done"
+    assert events[-1]["tools_used"][0]["tool"] == "get_incident"
+    tokens = [event["token"] for event in events if event["type"] == "token"]
+    assert tokens == ["Live ", "streamed ", "response"]
+    assert session.committed == 1
+    assert any(
+        getattr(message, "content", None) == "Live streamed response"
+        for message in session.added
+    )
 
 
 # -- spec 50 walkthrough -----------------------------------------------------

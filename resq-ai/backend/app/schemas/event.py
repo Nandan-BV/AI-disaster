@@ -7,6 +7,7 @@ from typing import Any
 
 class EventCreate(BaseModel):
     source: str = Field(..., min_length=1, max_length=100, description="Source of the event (e.g., social_media, news, satellite)")
+    external_id: Optional[str] = Field(None, max_length=255, description="Stable identifier assigned by an external feed")
     text_content: Optional[str] = Field(None, description="Text description of the event")
     event_type: Optional[str] = Field(None, max_length=50, description="Type of disaster event")
     latitude: float = Field(..., ge=-90, le=90, description="Latitude coordinate")
@@ -51,6 +52,7 @@ class EventCreate(BaseModel):
 class EventResponse(BaseModel):
     id: UUID
     source: str
+    external_id: Optional[str] = None
     text_content: Optional[str]
     event_type: Optional[str]
     latitude: float

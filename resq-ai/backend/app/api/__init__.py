@@ -1,6 +1,6 @@
-from app.api import health, events, analysis, incidents, investigation, geospatial, risk, resources, copilot
+from app.api import auth, health, events, analysis, incidents, investigation, geospatial, risk, resources, copilot
 
 __all__ = [
-    "health", "events", "analysis", "incidents", "investigation", "geospatial", "risk", "resources",
+    "auth", "health", "events", "analysis", "incidents", "investigation", "geospatial", "risk", "resources",
     "copilot",
 ]

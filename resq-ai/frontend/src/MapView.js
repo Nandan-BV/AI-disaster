@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { apiFetch } from './api';
 
 const API_BASE = '/api/v1';
 
@@ -42,9 +43,10 @@ const INFRASTRUCTURE_ICONS = {
   water_facility: '💧',
 };
 
-function MapView({ incidentId, center, zoom = 13 }) {
+function MapView({ incidentId, center, zoom = 13, liveEvents = [] }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
+  const latestLiveEventId = useRef(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapData, setMapData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -109,12 +111,65 @@ function MapView({ incidentId, center, zoom = 13 }) {
     };
   }, [incidentId]);
 
+  useEffect(() => {
+    if (!mapLoaded || !map.current) return;
+
+    const features = liveEvents
+      .filter(event => Number.isFinite(Number(event.longitude)) && Number.isFinite(Number(event.latitude)))
+      .map(event => ({
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [Number(event.longitude), Number(event.latitude)],
+        },
+        properties: {
+          id: event.id,
+          event_type: event.event_type || 'disaster report',
+          location_name: event.location_name || '',
+        },
+      }));
+    const source = map.current.getSource('live-events');
+    if (source) {
+      source.setData({ type: 'FeatureCollection', features });
+    } else {
+      map.current.addSource('live-events', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features },
+      });
+      map.current.addLayer({
+        id: 'live-events',
+        type: 'circle',
+        source: 'live-events',
+        paint: {
+          'circle-radius': 8,
+          'circle-color': '#ff1744',
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#ffffff',
+        },
+      });
+    }
+
+    const latestEvent = liveEvents.find(event => (
+      Number.isFinite(Number(event.longitude)) && Number.isFinite(Number(event.latitude))
+    ));
+    if (latestEvent && latestEvent.id !== latestLiveEventId.current) {
+      latestLiveEventId.current = latestEvent.id;
+      if (!incidentId) {
+        map.current.easeTo({
+          center: [Number(latestEvent.longitude), Number(latestEvent.latitude)],
+          zoom: Math.max(map.current.getZoom(), 12),
+          duration: 400,
+        });
+      }
+    }
+  }, [liveEvents, mapLoaded, incidentId]);
+
   const fetchMapData = async () => {
     if (!incidentId) return;
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_BASE}/incidents/${incidentId}/map-data`);
+      const response = await apiFetch(`${API_BASE}/incidents/${incidentId}/map-data`);
       if (response.ok) {
         const data = await response.json();
         setMapData(data);

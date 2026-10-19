@@ -16,8 +16,38 @@ from app.services.resource_service import (
     NearbyResource,
     ResourceCountSummary,
 )
+<<<<<<< HEAD
 from app.services.geospatial_service import GeospatialService, NearbyInfrastructure
 from app.schemas.resource import ResourceCreate, ResourceResponse, ResourceStatusUpdate
+=======
+from app.schemas.resource import ResourceCreate, ResourceResponse
+from app.schemas.resource import ResourceStatusUpdate
+
+
+@pytest.fixture
+async def client():
+    from httpx import ASGITransport, AsyncClient
+    from app.database import get_db
+    from app.main import app
+
+    db = AsyncMock()
+    count_result = MagicMock()
+    count_result.scalar.return_value = 0
+    db.execute.return_value = count_result
+
+    async def override_get_db():
+        yield db
+
+    app.dependency_overrides[get_db] = override_get_db
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test",
+        ) as test_client:
+            yield test_client
+    finally:
+        app.dependency_overrides.clear()
+>>>>>>> origin/main
 
 
 # Mock data
@@ -126,7 +156,9 @@ async def client(mock_db):
 class TestResourceService:
     @pytest.fixture
     def mock_db(self):
-        return AsyncMock()
+        db = AsyncMock()
+        db.add = MagicMock()
+        return db
 
     @pytest.fixture
     def mock_resource(self):
@@ -276,18 +308,31 @@ class TestResourceService:
 class TestResourceGeospatial:
     @pytest.fixture
     def mock_db(self):
-        return AsyncMock()
+        db = AsyncMock()
+        db.add = MagicMock()
+        return db
+
+    @pytest.fixture
+    def mock_resource(self):
+        return create_mock_resource()
 
     @pytest.fixture
     def resource_service(self, mock_db):
         return ResourceService(mock_db)
 
     @pytest.mark.asyncio
+<<<<<<< HEAD
     async def test_get_nearby_resources_no_location(self, resource_service, mock_db):
         mock_result = MagicMock()
         mock_result.first.return_value = None
         mock_db.execute.return_value = mock_result
 
+=======
+    async def test_get_nearby_resources_no_location(self, resource_service):
+        result = MagicMock()
+        result.first.return_value = None
+        resource_service.db.execute.return_value = result
+>>>>>>> origin/main
         with pytest.raises(ValueError, match="has no valid coordinates"):
             await resource_service.get_resources_for_incident(uuid4())
 
@@ -301,11 +346,14 @@ class TestResourceGeospatial:
         mock_row.latitude = mock_resource.latitude
         mock_row.longitude = mock_resource.longitude
         mock_row.address = mock_resource.address
+<<<<<<< HEAD
         mock_row.capacity = mock_resource.capacity
         mock_row.current_load = mock_resource.current_load
         mock_row.capabilities = mock_resource.capabilities
         mock_row.organization = mock_resource.organization
         mock_row.metadata = mock_resource.metadata
+=======
+>>>>>>> origin/main
         mock_row.distance_meters = 250.5
 
         mock_result = MagicMock()
@@ -314,7 +362,11 @@ class TestResourceGeospatial:
 
         nearby = await resource_service.get_nearby_resources(
             latitude=12.9716,
+<<<<<<< HEAD
             longitude=77.5946,
+=======
+            longitude=77.5946
+>>>>>>> origin/main
         )
 
         assert len(nearby) == 1
@@ -349,11 +401,14 @@ class TestResourceGeospatial:
         mock_row.latitude = mock_resource.latitude
         mock_row.longitude = mock_resource.longitude
         mock_row.address = mock_resource.address
+<<<<<<< HEAD
         mock_row.capacity = mock_resource.capacity
         mock_row.current_load = mock_resource.current_load
         mock_row.capabilities = mock_resource.capabilities
         mock_row.organization = mock_resource.organization
         mock_row.metadata = mock_resource.metadata
+=======
+>>>>>>> origin/main
         mock_row.distance_meters = 200
 
         mock_result = MagicMock()
@@ -394,9 +449,36 @@ class TestResourceGeospatial:
 
 
 class TestResourceAPI:
+<<<<<<< HEAD
+=======
+    @pytest.fixture
+    def mock_resource_service(self):
+        with patch("app.api.resources.ResourceService") as mock:
+            service_instance = MagicMock()
+            for method_name in (
+                "create_resource",
+                "list_resources",
+                "get_resource_by_id",
+                "update_resource",
+                "update_resource_status",
+                "delete_resource",
+                "get_nearby_resources",
+                "get_resource_counts_by_type",
+            ):
+                setattr(service_instance, method_name, AsyncMock())
+            mock.return_value = service_instance
+            yield service_instance
+
+    @pytest.fixture
+    def mock_resource(self):
+        return create_mock_resource()
+
+>>>>>>> origin/main
     @pytest.mark.asyncio
     async def test_create_resource(self, client, mock_resource_service):
         mock_resource = create_mock_resource()
+        mock_resource.name = "New Hospital"
+        mock_resource.capacity = 250
         mock_resource_service.create_resource.return_value = mock_resource
 
         payload = {
@@ -453,14 +535,18 @@ class TestResourceAPI:
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data["resources"], list)
+<<<<<<< HEAD
         assert data["total"] >= 1
         assert len(data["resources"]) >= 1
+=======
+        assert len(data["resources"]) == 1
+>>>>>>> origin/main
 
     @pytest.mark.asyncio
     async def test_list_resources_filter_type(self, client, mock_resource_service, mock_resource):
         mock_resource_service.list_resources.return_value = [mock_resource]
 
-        response = await client.get("/api/v1/resources?type=hospital")
+        response = await client.get("/api/v1/resources?resource_type=hospital")
         assert response.status_code == 200
         data = response.json()
         assert all(item["resource_type"] == "hospital" for item in data["resources"])
@@ -513,6 +599,7 @@ class TestResourceAPI:
 
 
 class TestNearbyResourcesAPI:
+<<<<<<< HEAD
     @pytest.mark.asyncio
     async def test_get_nearby_resources(self, client, mock_resource_service, mock_db, mock_incident):
         nearby = [
@@ -597,6 +684,70 @@ class TestNearbyResourcesAPI:
         )
 
         assert response.status_code == 422
+=======
+    @pytest.fixture
+    def mock_resource_service(self):
+        with patch("app.api.resources.ResourceService") as mock:
+            service_instance = MagicMock()
+            service_instance.get_nearby_resources = AsyncMock()
+            mock.return_value = service_instance
+            yield service_instance
+
+    @pytest.fixture
+    def mock_incident(self):
+        incident = MagicMock()
+        incident.id = uuid4()
+        incident.centroid_latitude = 12.9716
+        incident.centroid_longitude = 77.5946
+        incident.title = "Test Incident"
+        incident.incident_type = "flood"
+        incident.status = "active"
+        incident.event_count = 3
+        incident.last_updated = datetime(2026, 9, 21, 11, 0)
+        incident.created_at = datetime(2026, 9, 21, 10, 30)
+        return incident
+
+    @pytest.mark.asyncio
+    async def test_get_nearby_resources(self, client, mock_resource_service, mock_incident):
+        mock_resource_service.get_nearby_resources.return_value = [{
+            "id": str(uuid4()),
+            "name": "Nearby Hospital",
+            "resource_type": "hospital",
+            "status": "available",
+            "distance_meters": 250.5,
+            "latitude": 12.9720,
+            "longitude": 77.5950,
+            "capacity": 300,
+            "address": "Test Address",
+            "current_load": 0,
+            "capabilities": {},
+            "organization": "Test Health Dept",
+        }]
+
+        response = await client.get(
+            "/api/v1/resources/nearby",
+            params={"latitude": 12.9716, "longitude": 77.5946},
+        )
+        assert response.status_code == 200
+        assert len(response.json()["resources"]) == 1
+
+    @pytest.mark.asyncio
+    async def test_get_nearby_infrastructure_with_filters(self, client, mock_resource_service, mock_incident):
+        mock_resource_service.get_nearby_resources.return_value = []
+
+        response = await client.get(
+            "/api/v1/resources/nearby",
+            params={
+                "latitude": 12.9716,
+                "longitude": 77.5946,
+                "resource_type": "hospital",
+                "status": "available",
+                "radius_meters": 500,
+            },
+        )
+        assert response.status_code == 200
+        mock_resource_service.get_nearby_resources.assert_awaited_once()
+>>>>>>> origin/main
 
 
 class TestResourceValidation:

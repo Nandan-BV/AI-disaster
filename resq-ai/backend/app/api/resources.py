@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 
 from app.database import get_db
+from app.core.security import require_role
 from app.models.resource import Resource, ResourceType, ResourceStatus
 from app.models.incident import Incident
 from app.schemas.resource import (
@@ -83,6 +84,71 @@ async def list_resources(
     )
 
 
+@router.get("/nearby", response_model=NearbyResourceListResponse)
+async def get_nearby_resources(
+    latitude: float = Query(..., ge=-90, le=90),
+    longitude: float = Query(..., ge=-180, le=180),
+    radius_meters: Optional[float] = Query(None, ge=100, le=10000),
+    resource_type: Optional[str] = Query(None),
+    resource_status: Optional[str] = Query(None, alias="status"),
+    limit: int = Query(100, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db),
+):
+    """Find resources near a point using PostGIS spatial queries."""
+    if resource_type:
+        try:
+            ResourceType(resource_type)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid resource type: {resource_type}"
+            )
+
+    if resource_status:
+        try:
+            ResourceStatus(resource_status)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid status: {resource_status}"
+            )
+
+    service = ResourceService(db)
+    nearby = await service.get_nearby_resources(
+        latitude=latitude,
+        longitude=longitude,
+        radius_meters=radius_meters,
+        resource_type=resource_type,
+        status=resource_status,
+        limit=limit,
+    )
+    paginated = nearby[offset:offset + limit]
+    return NearbyResourceListResponse(
+        resources=paginated,
+        total=len(nearby),
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get("/nearby/counts", response_model=ResourceCountResponse)
+async def get_nearby_resource_counts(
+    latitude: float = Query(..., ge=-90, le=90),
+    longitude: float = Query(..., ge=-180, le=180),
+    radius_meters: Optional[float] = Query(None, ge=100, le=10000),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get counts of nearby resources grouped by type."""
+    service = ResourceService(db)
+    counts = await service.get_resource_counts_by_type(
+        latitude=latitude,
+        longitude=longitude,
+        radius_meters=radius_meters,
+    )
+    return ResourceCountResponse(counts=counts)
+
+
 @router.get("/{resource_id}", response_model=ResourceResponse)
 async def get_resource(
     resource_id: UUID,
@@ -131,6 +197,7 @@ async def update_resource_status(
     resource_id: UUID,
     status_update: ResourceStatusUpdate,
     db: AsyncSession = Depends(get_db),
+    _current_user=Depends(require_role(["dispatcher", "commander", "admin"])),
 ):
     """Update just the status of a resource."""
     service = ResourceService(db)
@@ -158,6 +225,7 @@ async def delete_resource(
         )
 
 
+<<<<<<< HEAD
 # Nearby resource search endpoints
 @router.get("/nearby", response_model=NearbyResourceListResponse)
 async def get_nearby_resources(
@@ -229,6 +297,8 @@ async def get_nearby_resource_counts(
     return ResourceCountResponse(counts=counts)
 
 
+=======
+>>>>>>> origin/main
 # Incident-specific resource endpoints
 @router.get("/incidents/{incident_id}/nearby-resources", response_model=NearbyResourceListResponse)
 async def get_incident_nearby_resources(
@@ -405,6 +475,7 @@ async def bulk_update_status(
     resource_ids: List[UUID],
     status: str,
     db: AsyncSession = Depends(get_db),
+    _current_user=Depends(require_role(["dispatcher", "commander", "admin"])),
 ):
     """Bulk update status for multiple resources (development/testing only)."""
     try:

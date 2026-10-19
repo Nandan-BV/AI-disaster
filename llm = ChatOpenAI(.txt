@@ -1,0 +1,10 @@
+llm = ChatOpenAI(
+    model="qwen2.5-coder:7b",
+    base_url="http://localhost:11434/v1",
+    api_key="ollama",
+    temperature=0,
+)
+
+COPILOT_PROVIDER=openai_compatible
+COPILOT_API_BASE_URL=http://localhost:11434/v1
+COPILOT_MODEL_NAME=qwen2.5:7b

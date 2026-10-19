@@ -11,10 +11,12 @@ approve, dispatch, or mutate anything through this surface.
 """
 
 import logging
+import json
 from datetime import datetime, timezone
-from typing import List
+from typing import Annotated, List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Path, status
+from sse_starlette.sse import EventSourceResponse
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,11 +26,13 @@ from app.ai.llm.base import CopilotLLMError
 from app.ai.tool_registry import tool_registry
 from app.ai.tools import register_all_tools
 from app.config import settings
+from app.core.security import get_current_user
 from app.database import get_db
 from app.models.copilot import CopilotConversation, CopilotMessage
 from app.schemas.copilot import (
     CopilotChatRequest,
     CopilotChatResponse,
+    CopilotChatStreamRequest,
     CopilotConversationResponse,
     CopilotDeleteResponse,
     CopilotMessageOut,
@@ -45,6 +49,49 @@ SESSION_ID_HELP = "Operator session handle, e.g. 'demo-session'."
 
 
 @router.post(
+    "/sessions/{session_id}/chat/stream",
+    summary="Stream a grounded copilot answer as server-sent events",
+)
+async def copilot_chat_stream(
+    session_id: Annotated[str, Path(min_length=1, max_length=200)],
+    payload: CopilotChatStreamRequest,
+    db: AsyncSession = Depends(get_db),
+    _current_user=Depends(get_current_user),
+) -> EventSourceResponse:
+    register_all_tools()
+    service = CopilotService(db)
+
+    async def events():
+        try:
+            async for item in service.answer_stream(
+                session_id=session_id,
+                message=payload.message,
+                incident_id=payload.incident_id,
+            ):
+                event_type = item.pop("type")
+                yield {
+                    "event": event_type,
+                    "data": json.dumps(item, default=str),
+                }
+        except CopilotLLMError as exc:
+            logger.warning("Copilot stream unavailable for session %s: %s", session_id, exc)
+            yield {
+                "event": "error",
+                "data": json.dumps({"detail": str(exc)}),
+            }
+        except Exception:
+            logger.exception("Copilot streaming request failed")
+            yield {
+                "event": "error",
+                "data": json.dumps(
+                    {"detail": "The copilot could not complete this request."}
+                ),
+            }
+
+    return EventSourceResponse(events())
+
+
+@router.post(
     "/chat",
     response_model=CopilotChatResponse,
     summary="Ask the emergency response copilot a question",
@@ -52,6 +99,7 @@ SESSION_ID_HELP = "Operator session handle, e.g. 'demo-session'."
 async def copilot_chat(
     payload: CopilotChatRequest,
     db: AsyncSession = Depends(get_db),
+    _current_user=Depends(get_current_user),
 ) -> CopilotChatResponse:
     """Answer an operator question using grounded backend tools.
 
@@ -103,6 +151,7 @@ async def copilot_chat(
 async def get_conversation(
     session_id: str,
     db: AsyncSession = Depends(get_db),
+    _current_user=Depends(get_current_user),
 ) -> CopilotConversationResponse:
     conversation = (
         await db.execute(
@@ -142,6 +191,7 @@ async def get_conversation(
 async def delete_conversation(
     session_id: str,
     db: AsyncSession = Depends(get_db),
+    _current_user=Depends(get_current_user),
 ) -> CopilotDeleteResponse:
     """Remove a conversation and its messages.
 

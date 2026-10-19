@@ -238,6 +238,12 @@ if the session was pinned to an incident, follow-ups stay on that incident; if n
 it needs one. The pin is stored on the conversation, so a follow-up like "what about
 resources?" lands on the right incident without the operator restating it.
 
+### `POST /copilot/sessions/{session_id}/chat/stream`
+
+Accepts `message` and optional `incident_id` as JSON and streams `token` events
+using Server-Sent Events. A final `done` event contains the same source, tool,
+uncertainty, and model metadata as the non-streaming chat response.
+
 ```json
 {
   "session_id": "demo-session",

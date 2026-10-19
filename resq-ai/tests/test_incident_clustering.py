@@ -153,13 +153,21 @@ class TestEmbeddingService:
 class TestSimilarityService:
     @pytest.fixture
     def mock_db(self):
-        return AsyncMock()
+        db = AsyncMock()
+        db.add = MagicMock()
+        return db
 
     @pytest.mark.asyncio
     async def test_calculate_geographic_distance(self, mock_db):
+<<<<<<< HEAD
         mock_result = MagicMock()
         mock_result.scalar.return_value = 1000.0
         mock_db.execute.return_value = mock_result
+=======
+        result = MagicMock()
+        result.scalar.return_value = 1000.0
+        mock_db.execute.return_value = result
+>>>>>>> origin/main
         distance = await calculate_geographic_distance(
             12.9716, 77.5946, 12.9718, 77.5948, mock_db
         )
@@ -168,7 +176,11 @@ class TestSimilarityService:
     def test_haversine_distance(self):
         # Distance between two close points (~31 m apart at this latitude)
         dist = haversine_distance(12.9716, 77.5946, 12.9718, 77.5948)
+<<<<<<< HEAD
         assert 30 < dist < 32
+=======
+        assert 20 < dist < 40  # ~31 meters
+>>>>>>> origin/main
 
     def test_calculate_temporal_distance(self):
         ts1 = datetime(2026, 9, 21, 10, 30)
@@ -276,7 +288,9 @@ from ai.services.similarity_service import haversine_distance
 class TestIncidentEventRelationship:
     @pytest.fixture
     def mock_db(self):
-        return AsyncMock()
+        db = AsyncMock()
+        db.add = MagicMock()
+        return db
 
     @pytest.fixture
     def sample_event(self):
@@ -313,7 +327,11 @@ class TestIncidentEventRelationship:
 
     @pytest.mark.asyncio
     async def test_create_new_incident(self, mock_db, sample_event):
-        with patch("ai.services.clustering_service.get_latest_ai_analysis", return_value=None):
+        with patch(
+            "ai.services.clustering_service.get_latest_ai_analysis",
+            new_callable=AsyncMock,
+            return_value=None,
+        ):
             incident = await create_new_incident(sample_event, [0.1]*384, mock_db)
 
             assert incident.incident_type == "flood"
@@ -322,6 +340,10 @@ class TestIncidentEventRelationship:
 
     @pytest.mark.asyncio
     async def test_add_event_to_incident(self, mock_db, sample_event, sample_incident):
+        result = MagicMock()
+        result.scalars.return_value.all.return_value = [sample_event]
+        mock_db.execute.return_value = result
+
         relationship = calculate_relationship_score(
             semantic_similarity=0.90,
             geographic_distance_meters=100,
@@ -330,11 +352,19 @@ class TestIncidentEventRelationship:
             disaster_type_score=1.0,
         )
 
+<<<<<<< HEAD
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = [sample_event]
         mock_db.execute.return_value = mock_result
 
         with patch("ai.services.clustering_service.get_latest_ai_analysis", return_value=None):
+=======
+        with patch(
+            "ai.services.clustering_service.get_latest_ai_analysis",
+            new_callable=AsyncMock,
+            return_value=None,
+        ):
+>>>>>>> origin/main
             incident_event = await add_event_to_incident(
                 sample_event, sample_incident, relationship, [0.1]*384, mock_db
             )
@@ -350,6 +380,7 @@ class TestProcessEventFlow:
     @pytest.fixture
     def mock_db(self):
         mock = AsyncMock()
+        mock.add = MagicMock()
         return mock
 
     @pytest.mark.asyncio
@@ -369,9 +400,26 @@ class TestProcessEventFlow:
         mock_result.scalar_one_or_none.return_value = mock_event
         mock_db.execute.return_value = mock_result
 
+<<<<<<< HEAD
         with patch("ai.services.clustering_service.find_best_matching_incident", return_value=(None, None)):
             with patch("ai.services.clustering_service.generate_and_store_embedding", return_value=[0.1]*384):
                 with patch("ai.services.clustering_service.create_new_incident") as mock_create:
+=======
+        with patch(
+            "ai.services.clustering_service.find_best_matching_incident",
+            new_callable=AsyncMock,
+            return_value=(None, None),
+        ):
+            with patch(
+                "ai.services.clustering_service.generate_and_store_embedding",
+                new_callable=AsyncMock,
+                return_value=[0.1] * 384,
+            ):
+                with patch(
+                    "ai.services.clustering_service.create_new_incident",
+                    new_callable=AsyncMock,
+                ) as mock_create:
+>>>>>>> origin/main
                     mock_incident = MagicMock()
                     mock_incident.id = uuid4()
                     mock_create.return_value = mock_incident
@@ -415,9 +463,20 @@ class TestProcessEventFlow:
             disaster_type_score=1.0,
         )
 
-        with patch("ai.services.clustering_service.find_best_matching_incident", return_value=(mock_incident, relationship)):
-            with patch("ai.services.clustering_service.generate_and_store_embedding", return_value=[0.1]*384):
-                with patch("ai.services.clustering_service.add_event_to_incident") as mock_add:
+        with patch(
+            "ai.services.clustering_service.find_best_matching_incident",
+            new_callable=AsyncMock,
+            return_value=(mock_incident, relationship),
+        ):
+            with patch(
+                "ai.services.clustering_service.generate_and_store_embedding",
+                new_callable=AsyncMock,
+                return_value=[0.1] * 384,
+            ):
+                with patch(
+                    "ai.services.clustering_service.add_event_to_incident",
+                    new_callable=AsyncMock,
+                ) as mock_add:
                     mock_incident_event = MagicMock()
                     mock_incident_event.id = uuid4()
                     mock_add.return_value = mock_incident_event

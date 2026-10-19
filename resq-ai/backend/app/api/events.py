@@ -1,25 +1,45 @@
 from datetime import datetime
 from uuid import UUID
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security import get_current_user, require_role
 from app.database import get_db
+from app.live_events import event_connections
+from app.models.user import UserRole
 from app.schemas.event import EventCreate, EventResponse, EventListResponse, EventDeleteResponse
+from app.services.external_ingestion import poll_external_feeds
 from app.services.event_service import EventService
 
 
 router = APIRouter(prefix="/events", tags=["events"])
+websocket_router = APIRouter()
+
+
+@websocket_router.websocket("/ws/events")
+async def live_events(websocket: WebSocket):
+    await event_connections.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        event_connections.disconnect(websocket)
 
 
 @router.post("", response_model=EventResponse, status_code=status.HTTP_201_CREATED)
 async def create_event(
     event_data: EventCreate,
     db: AsyncSession = Depends(get_db),
+    _current_user=Depends(get_current_user),
 ):
     service = EventService(db)
     event = await service.create_event(event_data)
-    return event
+    response = EventResponse.model_validate(event)
+    await event_connections.broadcast(
+        {"type": "event.created", "event": response.model_dump(mode="json")}
+    )
+    return response
 
 
 @router.get("", response_model=EventListResponse)
@@ -40,6 +60,17 @@ async def list_events(
         offset=offset,
     )
     return EventListResponse(events=events, total=total, limit=limit, offset=offset)
+
+
+@router.post("/sync-external", response_model=dict)
+async def sync_external_events(
+    db: AsyncSession = Depends(get_db),
+    _current_user=Depends(
+        require_role([UserRole.DISPATCHER, UserRole.COMMANDER, UserRole.ADMIN])
+    ),
+):
+    """Poll configured external disaster feeds and cluster any newly stored events."""
+    return await poll_external_feeds(db)
 
 
 @router.get("/{event_id}", response_model=EventResponse)

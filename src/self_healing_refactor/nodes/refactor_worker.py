@@ -1,6 +1,5 @@
-import os
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -25,8 +24,13 @@ def parallel_refactor_worker(state: ModuleState) -> Dict[str, Dict[str, str]]:
     for test_file, result in test_results.get("tests", {}).items():
         if result.get("failed", False):
             traceback = result.get("traceback", "")
+<<<<<<< HEAD
             traceback_text = "\n".join(traceback) if isinstance(traceback, list) else str(traceback)
             if module_path.replace("/", ".").replace("\\", ".").replace(".py", "") in traceback_text:
+=======
+            module_name = ".".join(Path(module_path).with_suffix("").parts)
+            if module_name in traceback:
+>>>>>>> origin/main
                 relevant_failures.append({
                     "test_file": test_file,
                     "traceback": traceback_text,

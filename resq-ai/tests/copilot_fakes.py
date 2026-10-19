@@ -8,6 +8,7 @@ without pretending to test the database itself. The SQL itself is fixed text
 executed by the real engine at runtime.
 """
 
+import re
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy.sql.elements import TextClause
@@ -240,4 +241,5 @@ class ScriptedLLMClient:
 
     async def chat_completion_stream(self, messages: Any, tools: Any = None, **kwargs: Any):
         response = await self.chat_completion(messages, tools, **kwargs)
-        yield response.content
+        for token in re.findall(r"\S+\s*", response.content) or [response.content]:
+            yield token
