@@ -5,6 +5,8 @@ from uuid import UUID, uuid4
 
 from fastapi import status
 from httpx import AsyncClient, ASGITransport
+from geoalchemy2.functions import ST_MakePoint, ST_SetSRID
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -38,7 +40,7 @@ async def override_get_db():
 app.dependency_overrides[get_db] = override_get_db
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 async def test_engine():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -55,26 +57,33 @@ async def db_session(test_engine):
 
 
 @pytest.fixture
-async def client():
+async def client(test_engine):
+    previous = app.dependency_overrides.get(get_db)
+    app.dependency_overrides[get_db] = override_get_db
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
+    if previous is None:
+        app.dependency_overrides.pop(get_db, None)
+    else:
+        app.dependency_overrides[get_db] = previous
 
 
 @pytest.fixture
-def sample_event(db_session):
+async def sample_event(db_session):
     event = Event(
         source="test_source",
         text_content="Heavy flooding reported near city center",
         event_type="flood",
         latitude=12.9716,
         longitude=77.5946,
+        location=ST_SetSRID(ST_MakePoint(77.5946, 12.9716), 4326),
         location_name="Bengaluru",
         timestamp=datetime(2026, 9, 21, 10, 30),
     )
     db_session.add(event)
-    db_session.commit()
-    db_session.refresh(event)
+    await db_session.commit()
+    await db_session.refresh(event)
     return event
 
 
@@ -130,11 +139,12 @@ class TestAnalyzeEventAPI:
             source="test",
             latitude=12.9716,
             longitude=77.5946,
+            location=ST_SetSRID(ST_MakePoint(77.5946, 12.9716), 4326),
             timestamp=datetime(2026, 9, 21, 10, 30),
         )
         db_session.add(event)
-        db_session.commit()
-        db_session.refresh(event)
+        await db_session.commit()
+        await db_session.refresh(event)
 
         response = await client.post(f"/api/v1/events/{event.id}/analyze", json={})
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY

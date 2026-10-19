@@ -1,7 +1,7 @@
 from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status as http_status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from geoalchemy2.functions import ST_AsGeoJSON
@@ -25,7 +25,7 @@ router = APIRouter(prefix="/incidents", tags=["geospatial"])
 
 
 # Infrastructure CRUD endpoints
-@router.post("/infrastructure", response_model=InfrastructureResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/infrastructure", response_model=InfrastructureResponse, status_code=http_status.HTTP_201_CREATED)
 async def create_infrastructure(
     infrastructure: InfrastructureCreate,
     db: AsyncSession = Depends(get_db),
@@ -88,13 +88,13 @@ async def get_infrastructure(
     infra = result.scalar_one_or_none()
     if not infra:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=http_status.HTTP_404_NOT_FOUND,
             detail=f"Infrastructure {infrastructure_id} not found"
         )
     return infra
 
 
-@router.delete("/infrastructure/{infrastructure_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/infrastructure/{infrastructure_id}", status_code=http_status.HTTP_204_NO_CONTENT)
 async def delete_infrastructure(
     infrastructure_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -106,7 +106,7 @@ async def delete_infrastructure(
     infra = result.scalar_one_or_none()
     if not infra:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=http_status.HTTP_404_NOT_FOUND,
             detail=f"Infrastructure {infrastructure_id} not found"
         )
     await db.delete(infra)
@@ -127,7 +127,7 @@ async def get_incident_location(
     row = result.first()
     if not row:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=http_status.HTTP_404_NOT_FOUND,
             detail=f"Incident {incident_id} not found"
         )
     return IncidentLocationResponse(
@@ -149,7 +149,7 @@ async def get_incident_area(
     incident = result.scalar_one_or_none()
     if not incident:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=http_status.HTTP_404_NOT_FOUND,
             detail=f"Incident {incident_id} not found"
         )
 
@@ -169,7 +169,7 @@ async def get_incident_area(
     )
 
 
-@router.post("/{incident_id}/area", response_model=IncidentAnalysisAreaResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/{incident_id}/area", response_model=IncidentAnalysisAreaResponse, status_code=http_status.HTTP_201_CREATED)
 async def create_incident_area(
     incident_id: UUID,
     radius_meters: Optional[float] = Query(None, ge=100, le=10000),
@@ -180,15 +180,17 @@ async def create_incident_area(
     incident = result.scalar_one_or_none()
     if not incident:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=http_status.HTTP_404_NOT_FOUND,
             detail=f"Incident {incident_id} not found"
         )
 
     service = GeospatialService(db)
     area = await service.create_analysis_area(incident_id, radius_meters)
 
-    result = await db.execute(select(ST_AsGeoJSON(area.geometry)))
-    geometry = result.scalar()
+    geometry = None
+    if area.geometry is not None:
+        result = await db.execute(select(ST_AsGeoJSON(area.geometry)))
+        geometry = result.scalar()
 
     return IncidentAnalysisAreaResponse(
         incident_id=incident_id,
@@ -213,7 +215,7 @@ async def get_nearby_infrastructure(
     incident = result.scalar_one_or_none()
     if not incident:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=http_status.HTTP_404_NOT_FOUND,
             detail=f"Incident {incident_id} not found"
         )
 
@@ -224,7 +226,7 @@ async def get_nearby_infrastructure(
             infra_type = InfrastructureType(infrastructure_type)
         except ValueError:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Invalid infrastructure type: {infrastructure_type}"
             )
 
@@ -234,7 +236,7 @@ async def get_nearby_infrastructure(
             infra_status = InfrastructureStatus(status)
         except ValueError:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Invalid status: {status}"
             )
 
@@ -272,7 +274,7 @@ async def get_infrastructure_by_type(
     incident = result.scalar_one_or_none()
     if not incident:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=http_status.HTTP_404_NOT_FOUND,
             detail=f"Incident {incident_id} not found"
         )
 
@@ -280,7 +282,7 @@ async def get_infrastructure_by_type(
         infra_type = InfrastructureType(type)
     except ValueError:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Invalid infrastructure type: {type}"
         )
 
@@ -290,7 +292,7 @@ async def get_infrastructure_by_type(
             infra_status = InfrastructureStatus(status)
         except ValueError:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Invalid status: {status}"
             )
 
@@ -322,7 +324,7 @@ async def get_affected_infrastructure(
     incident = result.scalar_one_or_none()
     if not incident:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=http_status.HTTP_404_NOT_FOUND,
             detail=f"Incident {incident_id} not found"
         )
 
@@ -342,7 +344,7 @@ async def get_incident_map_data(
     incident = result.scalar_one_or_none()
     if not incident:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=http_status.HTTP_404_NOT_FOUND,
             detail=f"Incident {incident_id} not found"
         )
 
@@ -362,7 +364,7 @@ async def get_infrastructure_counts(
     incident = result.scalar_one_or_none()
     if not incident:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=http_status.HTTP_404_NOT_FOUND,
             detail=f"Incident {incident_id} not found"
         )
 

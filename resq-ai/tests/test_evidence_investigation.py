@@ -201,6 +201,11 @@ class TestGeographicTemporalConsistency:
             incident_id=uuid4(),
             incident=MagicMock(),
             events=events,
+            geographic_bounds={
+                "min_lat": 12.9715, "max_lat": 12.9718,
+                "min_lon": 77.5945, "max_lon": 77.5948,
+                "centroid_lat": 12.97163, "centroid_lon": 77.59463,
+            },
         )
         items = extract_geographic_evidence(collection, incident_center=(12.9716, 77.5946))
 
@@ -218,6 +223,11 @@ class TestGeographicTemporalConsistency:
             incident_id=uuid4(),
             incident=MagicMock(),
             events=events,
+            geographic_bounds={
+                "min_lat": 12.9716, "max_lat": 13.5,
+                "min_lon": 77.5946, "max_lon": 78.0,
+                "centroid_lat": 13.2358, "centroid_lon": 77.7973,
+            },
         )
         items = extract_geographic_evidence(collection, incident_center=(12.9716, 77.5946))
 
@@ -235,6 +245,7 @@ class TestGeographicTemporalConsistency:
             incident_id=uuid4(),
             incident=MagicMock(),
             events=events,
+            total_events=len(events),
             time_range=(base, base + timedelta(minutes=30)),
         )
         items = extract_temporal_evidence(collection)
@@ -253,6 +264,7 @@ class TestGeographicTemporalConsistency:
             incident_id=uuid4(),
             incident=MagicMock(),
             events=events,
+            total_events=len(events),
             time_range=(base, base + timedelta(days=7)),
         )
         items = extract_temporal_evidence(collection)
@@ -267,6 +279,7 @@ class TestGeographicTemporalConsistency:
             incident_id=uuid4(),
             incident=MagicMock(),
             events=events,
+            total_events=len(events),
             time_range=(base, base),
         )
         items = extract_temporal_evidence(collection)
@@ -421,7 +434,7 @@ class TestFallbackInvestigation:
         assert result["assessment"] == "insufficient_evidence"
         assert result["evidence_confidence_score"] == 0.0
 
-    def test_fallback_inconclusive(self):
+    def test_fallback_single_weak_item_is_insufficient(self):
         supporting = [Evidence(
             incident_id=uuid4(), event_id=uuid4(),
             evidence_type=EvidenceType.TEXT, evidence_role=EvidenceRole.SUPPORTING,
@@ -435,7 +448,28 @@ class TestFallbackInvestigation:
             multimodal_consistency=0.3,
         )
 
-        assert result["assessment"] in ["weakly_supported", "inconclusive"]
+        # A single weak item cannot establish support: the deterministic rubric
+        # falls through to insufficient_evidence (total_evidence <= 2).
+        assert result["assessment"] == "insufficient_evidence"
+
+    def test_fallback_inconclusive(self):
+        neutral = [
+            Evidence(
+                incident_id=uuid4(), event_id=uuid4(),
+                evidence_type=EvidenceType.TEXT, evidence_role=EvidenceRole.NEUTRAL,
+                description="Test", confidence=0.3, evidence_quality=0.3,
+            )
+            for _ in range(3)
+        ]
+        result = fallback_investigation(
+            neutral,
+            source_diversity=0.3,
+            geographic_consistency=0.3,
+            temporal_consistency=0.3,
+            multimodal_consistency=0.3,
+        )
+
+        assert result["assessment"] == "inconclusive"
 
 
 class TestEvidenceInvestigationAPI:

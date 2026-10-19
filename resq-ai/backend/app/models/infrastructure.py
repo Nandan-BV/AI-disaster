@@ -45,7 +45,7 @@ class Infrastructure(Base):
     infrastructure_type = Column(SQLEnum(InfrastructureType), nullable=False, index=True)
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
-    location = Column(Geometry(geometry_type="POINT", srid=4326), nullable=False, index=True)
+    location = Column(Geometry(geometry_type="POINT", srid=4326), nullable=False)
     address = Column(Text, nullable=True)
     capacity = Column(Integer, nullable=True)  # e.g., bed count for hospital, capacity for shelter
     status = Column(SQLEnum(InfrastructureStatus), default=InfrastructureStatus.UNKNOWN, nullable=False, index=True)

@@ -38,7 +38,7 @@ class Resource(Base):
     status = Column(SQLEnum(ResourceStatus), default=ResourceStatus.UNKNOWN, nullable=False, index=True)
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
-    location = Column(Geometry(geometry_type="POINT", srid=4326), nullable=False, index=True)
+    location = Column(Geometry(geometry_type="POINT", srid=4326), nullable=False)
     address = Column(Text, nullable=True)
     capacity = Column(Integer, nullable=True)  # e.g., patient capacity for ambulance, people capacity for shelter
     current_load = Column(Integer, nullable=True)  # current utilization

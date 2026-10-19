@@ -12,7 +12,7 @@ from geoalchemy2.shape import to_shape
 from ai.config import ai_config
 from ai.services.embedding_service import cosine_similarity, build_event_text_representation
 from app.models.event import Event
-from app.models.incident import Incident
+from app.models.incident import Incident, IncidentEvent
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +25,15 @@ class SimilarityComponents:
     temporal_distance_minutes: float
     disaster_type_match: bool
     disaster_type_score: float
+
+    def to_dict(self) -> dict:
+        return {
+            "semantic_similarity": self.semantic_similarity,
+            "geographic_distance_meters": self.geographic_distance_meters,
+            "temporal_distance_minutes": self.temporal_distance_minutes,
+            "disaster_type_match": self.disaster_type_match,
+            "disaster_type_score": self.disaster_type_score,
+        }
 
 
 @dataclass

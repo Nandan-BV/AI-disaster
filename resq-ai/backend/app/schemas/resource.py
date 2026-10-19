@@ -87,6 +87,9 @@ class NearbyResourceResponse(BaseModel):
     capabilities: Optional[Dict[str, Any]]
     organization: Optional[str]
 
+    class Config:
+        from_attributes = True
+
 
 class NearbyResourceListResponse(BaseModel):
     resources: List[NearbyResourceResponse]

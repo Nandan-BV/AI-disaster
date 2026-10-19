@@ -1,10 +1,12 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime
+from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 from fastapi import status
 from httpx import AsyncClient, ASGITransport
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.pool import StaticPool
 from geoalchemy2 import WKTElement
@@ -38,7 +40,7 @@ async def override_get_db():
 app.dependency_overrides[get_db] = override_get_db
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 async def test_engine():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -55,14 +57,20 @@ async def db_session(test_engine):
 
 
 @pytest.fixture
-async def client():
+async def client(test_engine):
+    previous = app.dependency_overrides.get(get_db)
+    app.dependency_overrides[get_db] = override_get_db
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
+    if previous is None:
+        app.dependency_overrides.pop(get_db, None)
+    else:
+        app.dependency_overrides[get_db] = previous
 
 
 @pytest.fixture
-def sample_incident(db_session):
+async def sample_incident(db_session):
     incident = Incident(
         incident_type="flood",
         title="Test Flood Incident",
@@ -74,13 +82,13 @@ def sample_incident(db_session):
         status="active",
     )
     db_session.add(incident)
-    db_session.commit()
-    db_session.refresh(incident)
+    await db_session.commit()
+    await db_session.refresh(incident)
     return incident
 
 
 @pytest.fixture
-def sample_infrastructure(db_session):
+async def sample_infrastructure(db_session):
     infra = Infrastructure(
         name="Test Hospital",
         infrastructure_type=InfrastructureType.HOSPITAL,
@@ -93,8 +101,8 @@ def sample_infrastructure(db_session):
         road_status=RoadStatus.OPEN,
     )
     db_session.add(infra)
-    db_session.commit()
-    db_session.refresh(infra)
+    await db_session.commit()
+    await db_session.refresh(infra)
     return infra
 
 
@@ -102,6 +110,13 @@ def sample_infrastructure(db_session):
 def mock_geospatial_service():
     with patch("app.api.geospatial.GeospatialService") as mock:
         service_instance = MagicMock()
+        service_instance.get_analysis_area = AsyncMock()
+        service_instance.create_analysis_area = AsyncMock()
+        service_instance.get_nearby_infrastructure = AsyncMock()
+        service_instance.get_nearby_by_type = AsyncMock()
+        service_instance.analyze_affected_infrastructure = AsyncMock()
+        service_instance.get_incident_map_data = AsyncMock()
+        service_instance.get_infrastructure_count_by_type = AsyncMock()
         mock.return_value = service_instance
         yield service_instance
 
@@ -147,7 +162,9 @@ class TestInfrastructureCRUD:
 
     @pytest.mark.asyncio
     async def test_list_infrastructure_filter_type(self, client, sample_infrastructure):
-        response = await client.get("/api/v1/incidents/infrastructure?type=hospital")
+        response = await client.get(
+            "/api/v1/incidents/infrastructure?infrastructure_type=hospital"
+        )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         for item in data:
@@ -230,7 +247,7 @@ class TestIncidentGeospatialEndpoints:
     @pytest.mark.asyncio
     async def test_get_nearby_infrastructure(self, client, sample_incident, mock_geospatial_service):
         mock_nearby = [
-            MagicMock(
+            SimpleNamespace(
                 id=uuid4(),
                 name="Nearby Hospital",
                 infrastructure_type=InfrastructureType.HOSPITAL,
@@ -267,7 +284,7 @@ class TestIncidentGeospatialEndpoints:
     @pytest.mark.asyncio
     async def test_get_infrastructure_by_type(self, client, sample_incident, mock_geospatial_service):
         mock_nearby = [
-            MagicMock(
+            SimpleNamespace(
                 id=uuid4(),
                 name="Hospital 1",
                 infrastructure_type=InfrastructureType.HOSPITAL,

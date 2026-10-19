@@ -157,16 +157,18 @@ class TestSimilarityService:
 
     @pytest.mark.asyncio
     async def test_calculate_geographic_distance(self, mock_db):
-        mock_db.execute.return_value.scalar.return_value = 1000.0
+        mock_result = MagicMock()
+        mock_result.scalar.return_value = 1000.0
+        mock_db.execute.return_value = mock_result
         distance = await calculate_geographic_distance(
             12.9716, 77.5946, 12.9718, 77.5948, mock_db
         )
         assert distance == 1000.0
 
     def test_haversine_distance(self):
-        # Distance between two close points
+        # Distance between two close points (~31 m apart at this latitude)
         dist = haversine_distance(12.9716, 77.5946, 12.9718, 77.5948)
-        assert 200 < dist < 400  # ~250 meters
+        assert 30 < dist < 32
 
     def test_calculate_temporal_distance(self):
         ts1 = datetime(2026, 9, 21, 10, 30)
@@ -328,6 +330,10 @@ class TestIncidentEventRelationship:
             disaster_type_score=1.0,
         )
 
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [sample_event]
+        mock_db.execute.return_value = mock_result
+
         with patch("ai.services.clustering_service.get_latest_ai_analysis", return_value=None):
             incident_event = await add_event_to_incident(
                 sample_event, sample_incident, relationship, [0.1]*384, mock_db
@@ -363,9 +369,6 @@ class TestProcessEventFlow:
         mock_result.scalar_one_or_none.return_value = mock_event
         mock_db.execute.return_value = mock_result
 
-        # Mock no existing incident assignment
-        mock_db.execute.return_value.scalar_one_or_none.return_value = None
-
         with patch("ai.services.clustering_service.find_best_matching_incident", return_value=(None, None)):
             with patch("ai.services.clustering_service.generate_and_store_embedding", return_value=[0.1]*384):
                 with patch("ai.services.clustering_service.create_new_incident") as mock_create:
@@ -396,9 +399,6 @@ class TestProcessEventFlow:
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = mock_event
         mock_db.execute.return_value = mock_result
-
-        # Mock no existing incident assignment for this event
-        mock_db.execute.return_value.scalar_one_or_none.return_value = None
 
         mock_incident = MagicMock()
         mock_incident.id = incident_id

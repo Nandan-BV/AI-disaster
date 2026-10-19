@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 class CollectedEvidence:
     """Container for collected evidence from an event."""
     event_id: UUID
+    incident_id: Optional[UUID] = None
     event_text: Optional[str] = None
     event_source: Optional[str] = None
     event_timestamp: Optional[datetime] = None
@@ -100,6 +101,7 @@ async def collect_incident_evidence(incident_id: UUID, db: AsyncSession) -> Inci
 
         collected = CollectedEvidence(
             event_id=event.id,
+            incident_id=incident_id,
             event_text=event.text_content,
             event_source=event.source,
             event_timestamp=event.timestamp,
@@ -561,10 +563,13 @@ def determine_visual_role(ai_analysis: DisasterAnalysis) -> EvidenceRole:
 
 def calculate_visual_quality(ai_analysis: DisasterAnalysis) -> float:
     """Calculate visual evidence quality (0-1)."""
-    quality = 0.5  # Base for visual
+    quality = 0.3  # Base quality
 
     confidence = ai_analysis.disaster_type_confidence or 0.0
-    quality += confidence * 0.3
+    if confidence > 0.7:
+        quality += 0.25
+    elif confidence > 0.4:
+        quality += 0.1
 
     # Damage observations
     if ai_analysis.damage_observed:

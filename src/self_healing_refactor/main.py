@@ -12,15 +12,12 @@ def main():
     parser = argparse.ArgumentParser(description="Self-Healing Codebase Refactoring Engine")
     parser.add_argument("repository_path", help="Path to the Python repository to refactor")
     parser.add_argument("--max-retries", type=int, default=3, help="Maximum retry attempts (default: 3)")
-    parser.add_argument("--api-key", help="OpenAI API key (or set OPENAI_API_KEY env var)")
+    parser.add_argument("--api-key", help="Optional API key if your model server requires one")
 
     args = parser.parse_args()
 
     if args.api_key:
         os.environ["OPENAI_API_KEY"] = args.api_key
-    elif not os.getenv("OPENAI_API_KEY"):
-        print("Error: OpenAI API key required. Set OPENAI_API_KEY env var or use --api-key")
-        return 1
 
     repo_path = Path(args.repository_path).resolve()
     if not repo_path.exists():

@@ -114,6 +114,7 @@ async def get_event_analysis(
         select(EventAIAnalysis)
         .where(EventAIAnalysis.event_id == event_id)
         .order_by(EventAIAnalysis.created_at.desc())
+        .limit(1)
     )
     analysis = result.scalar_one_or_none()
 

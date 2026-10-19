@@ -1,0 +1,44 @@
+.state-view {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 20px;
+  border-radius: 8px;
+  background: #fff;
+  color: #52606d;
+  font-size: 0.95rem;
+}
+
+.state-icon {
+  font-size: 1.1rem;
+}
+
+.state-error {
+  background: #fdecea;
+  color: #b71c1c;
+}
+
+.state-empty {
+  background: #f7f9fb;
+  color: #7b8794;
+}
+
+.state-unavailable {
+  background: #fff8e1;
+  color: #8d6e00;
+}
+
+.state-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #cfd8e3;
+  border-top-color: #1a73e8;
+  border-radius: 50%;
+  animation: state-spin 0.7s linear infinite;
+}
+
+@keyframes state-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

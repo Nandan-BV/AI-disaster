@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, field_validator
 from typing import Optional
 
 
@@ -38,6 +38,13 @@ class Settings(BaseSettings):
     DEFAULT_RESOURCE_SEARCH_RADIUS_METERS: float = Field(default=2000.0, alias="DEFAULT_RESOURCE_SEARCH_RADIUS_METERS")
     MAX_RESOURCE_SEARCH_RADIUS_METERS: float = Field(default=10000.0, alias="MAX_RESOURCE_SEARCH_RADIUS_METERS")
     
+    # Command Center Dashboard Configuration (Phase 10)
+    # Polling only — the backend has no push/live feed. This is a period, not
+    # a real-time guarantee.
+    DASHBOARD_REFRESH_INTERVAL_SECONDS: int = Field(default=30, alias="DASHBOARD_REFRESH_INTERVAL_SECONDS")
+    DASHBOARD_DEFAULT_PAGE_SIZE: int = Field(default=20, alias="DASHBOARD_DEFAULT_PAGE_SIZE")
+    DASHBOARD_MAX_PAGE_SIZE: int = Field(default=100, alias="DASHBOARD_MAX_PAGE_SIZE")
+
     # Optimization Configuration (Phase 8)
     MAX_RESOURCE_ALLOCATION_DISTANCE_METERS: float = Field(default=50000.0, alias="MAX_RESOURCE_ALLOCATION_DISTANCE_METERS")
     
@@ -109,6 +116,20 @@ class Settings(BaseSettings):
     INFRA_WEIGHT_WATER_FACILITY: float = Field(default=6.0, alias="INFRA_WEIGHT_WATER_FACILITY")
     INFRA_WEIGHT_SCHOOL: float = Field(default=4.0, alias="INFRA_WEIGHT_SCHOOL")
     
+    @field_validator("DASHBOARD_REFRESH_INTERVAL_SECONDS")
+    @classmethod
+    def _validate_refresh_interval(cls, value: int) -> int:
+        if value < 5:
+            raise ValueError("DASHBOARD_REFRESH_INTERVAL_SECONDS must be >= 5")
+        return value
+
+    @field_validator("DASHBOARD_DEFAULT_PAGE_SIZE", "DASHBOARD_MAX_PAGE_SIZE")
+    @classmethod
+    def _validate_page_sizes(cls, value: int) -> int:
+        if value < 1:
+            raise ValueError("dashboard page sizes must be >= 1")
+        return value
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

@@ -11,7 +11,7 @@ InfrastructureType = Literal[
 ]
 
 InfrastructureStatus = Literal[
-    "operational", "partially_operational", "unavailable", "UNKNOWN"
+    "operational", "partially_operational", "unavailable", "unknown"
 ]
 
 RoadStatus = Literal[
@@ -26,7 +26,7 @@ class InfrastructureCreate(BaseModel):
     longitude: float = Field(..., ge=-180, le=180)
     address: Optional[str] = None
     capacity: Optional[int] = Field(None, ge=0)
-    status: InfrastructureStatus = "UNKNOWN"
+    status: InfrastructureStatus = "unknown"
     road_status: Optional[RoadStatus] = None
     metadata: Optional[dict] = None
 
@@ -61,6 +61,9 @@ class NearbyInfrastructureResponse(BaseModel):
     address: Optional[str]
     road_status: Optional[RoadStatus]
     metadata: Optional[dict]
+
+    class Config:
+        from_attributes = True
 
 
 class NearbyInfrastructureListResponse(BaseModel):

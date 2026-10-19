@@ -385,50 +385,6 @@ async def update_allocation_status(
     return _format_allocation(allocation)
 
 
-@router.get("/{incident_id}/impact", response_model=dict)
-async def get_impact_assessment(
-    incident_id: UUID,
-    db: AsyncSession = Depends(get_db),
-):
-    """Get the latest impact assessment for an incident."""
-    result = await db.execute(
-        select(ImpactAssessment)
-        .where(ImpactAssessment.incident_id == incident_id)
-        .order_by(ImpactAssessment.assessed_at.desc())
-        .limit(1)
-    )
-    impact = result.scalar_one_or_none()
-
-    if not impact:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No impact assessment found for incident {incident_id}. Run risk assessment first.",
-        )
-
-    return _format_impact(impact)
-
-
-@router.post("/{incident_id}/impact/recalculate", response_model=dict)
-async def recalculate_impact(
-    incident_id: UUID,
-    db: AsyncSession = Depends(get_db),
-):
-    """Recalculate impact assessment using the latest data."""
-    from app.services.risk_service import calculate_impact_assessment
-
-    result = await db.execute(select(Incident).where(Incident.id == incident_id))
-    incident = result.scalar_one_or_none()
-
-    if not incident:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Incident {incident_id} not found",
-        )
-
-    impact = await calculate_impact_assessment(incident_id, db)
-    return _format_impact(impact)
-
-
 # ---------------------------------------------------------------------------
 # Private helper formatters
 # ---------------------------------------------------------------------------
@@ -462,31 +418,4 @@ def _format_allocation(a: ResourceAllocation) -> dict:
         "assignment_reason": a.assignment_reason,
         "status": a.status.value if hasattr(a.status, "value") else a.status,
         "created_at": a.created_at.isoformat() if a.created_at else None,
-    }
-
-
-def _format_impact(impact: ImpactAssessment) -> dict:
-    return {
-        "id": str(impact.id),
-        "incident_id": str(impact.incident_id),
-        "population_potentially_exposed": impact.population_potentially_exposed,
-        "population_zones_count": impact.population_zones_count,
-        "population_weighted_exposure": impact.population_weighted_exposure,
-        "infrastructure_potentially_exposed": impact.infrastructure_potentially_exposed,
-        "hospitals_count": impact.hospitals_count,
-        "shelters_count": impact.shelters_count,
-        "fire_stations_count": impact.fire_stations_count,
-        "police_stations_count": impact.police_stations_count,
-        "schools_count": impact.schools_count,
-        "bridges_count": impact.bridges_count,
-        "roads_count": impact.roads_count,
-        "emergency_centers_count": impact.emergency_centers_count,
-        "power_stations_count": impact.power_stations_count,
-        "water_facilities_count": impact.water_facilities_count,
-        "roads_potentially_affected": impact.roads_potentially_affected,
-        "bridges_potentially_affected": impact.bridges_potentially_affected,
-        "accessibility_status": impact.accessibility_status,
-        "accessibility_details": impact.accessibility_details,
-        "explanation": impact.explanation,
-        "assessed_at": impact.assessed_at.isoformat() if impact.assessed_at else None,
     }

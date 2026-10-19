@@ -1,7 +1,7 @@
 import ast
 import os
 from pathlib import Path
-from typing import Dict, List, Set
+from typing import Any, Dict, List, Set
 
 from ..state.schemas import RefactorState
 

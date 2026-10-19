@@ -2,6 +2,9 @@
 
 A production-grade Python application using LangGraph (StateGraph), LangChain, Python AST, and PyTest to automatically refactor and fix codebases.
 
+This repository also contains the separate RESQ-AI web application in [resq-ai](./resq-ai/README.md).
+See that README for its backend, PostGIS database, and frontend setup.
+
 ## Architecture
 
 ```
@@ -22,24 +25,39 @@ START → ast_scanner_node
 
 ## Installation
 
-```bash
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-Set your OpenAI API key:
-```bash
-export OPENAI_API_KEY="your-key-here"
+## Run Locally with Ollama
+
+Install Ollama, then download a coding model:
+
+```powershell
+ollama pull qwen2.5-coder:7b
 ```
+
+Ollama normally runs in the background on Windows. If it is not running, start
+it in another terminal with `ollama serve`. The default model endpoint is
+`http://localhost:11434/v1`; set `OLLAMA_BASE_URL` or `OLLAMA_MODEL` to override
+the defaults.
 
 ## Usage
 
-```bash
-# Run on test project
-python -m src.self_healing_refactor test_project --max-retries 3
+```powershell
+# From the repository root, with the virtual environment activated:
+python -m src.self_healing_refactor.main test_project --max-retries 3
 
-# Or with API key
-python -m src.self_healing_refactor test_project --api-key "your-key"
+# Optional: point at another OpenAI-compatible local model server
+$env:OLLAMA_BASE_URL = "http://localhost:11434/v1"
+$env:OLLAMA_MODEL = "qwen2.5-coder:7b"
 ```
+
+The tool modifies Python files in the target repository. The API key argument is
+optional; Ollama uses a local placeholder by default, so no paid OpenAI key is
+needed.
 
 ## Project Structure
 
@@ -86,6 +104,6 @@ test_project/                   # Example project with bugs
 ## Requirements
 
 - Python 3.10+
-- OpenAI API key (for GPT-4)
+- Ollama with a locally downloaded coding model (default: `qwen2.5-coder:7b`)
 - langgraph, langchain, langchain-openai
 - pytest, pytest-json-report

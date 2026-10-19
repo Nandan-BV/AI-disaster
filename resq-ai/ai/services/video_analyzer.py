@@ -123,7 +123,10 @@ def analyze_video(video_path: Union[str, Path]) -> DisasterAnalysis:
 
     try:
         model = model_manager.load_model()
-        prompt = PROMPT_TEMPLATE.format(frame_count=len(frame_paths))
+        # The prompt contains single braces for its JSON schema, so str.format()
+        # cannot be used: it raises KeyError on the schema. Substitute the frame
+        # count token directly instead.
+        prompt = PROMPT_TEMPLATE.replace("{{frame_count}}", str(len(frame_paths)))
         return model.analyze_frames(frame_paths, prompt)
 
     finally:

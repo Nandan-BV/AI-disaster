@@ -1,7 +1,9 @@
 from typing import Dict, List, Any, Annotated
 from typing_extensions import TypedDict
-from langgraph.graph import add_messages
-from langgraph.graph.message import merge_dict_reducer
+
+
+def merge_file_patches(left: Dict[str, str], right: Dict[str, str]) -> Dict[str, str]:
+    return {**left, **right}
 
 
 class ModuleState(TypedDict):
@@ -16,7 +18,7 @@ class RefactorState(TypedDict):
     repository_path: str
     modules_to_refactor: List[str]
     ast_dependency_map: Dict[str, List[str]]
-    file_patches: Annotated[Dict[str, str], merge_dict_reducer]
+    file_patches: Annotated[Dict[str, str], merge_file_patches]
     test_results: Dict[str, Any]
     retry_count: int
     max_retries: int

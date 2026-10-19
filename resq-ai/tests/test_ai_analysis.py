@@ -1,4 +1,5 @@
 import pytest
+from contextlib import ExitStack
 from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
 from pathlib import Path
 from datetime import datetime
@@ -191,11 +192,18 @@ class TestVideoAnalyzer:
 class TestMultimodalAnalyzer:
     @pytest.fixture
     def mock_model_manager(self):
-        with patch("ai.services.multimodal_analyzer.model_manager") as mock:
+        # analyze_multimodal() has no module-level model_manager: it delegates
+        # to the text/image/video analyzers, so those are the patch targets.
+        with ExitStack() as stack:
+            mocks = [
+                stack.enter_context(patch(f"ai.services.{name}.model_manager"))
+                for name in ("text_analyzer", "image_analyzer", "video_analyzer")
+            ]
             mock_model = MockModel()
-            mock.get_model.return_value = mock_model
-            mock.load_model.return_value = mock_model
-            yield mock
+            for mock in mocks:
+                mock.get_model.return_value = mock_model
+                mock.load_model.return_value = mock_model
+            yield mocks[0]
 
     def test_analyze_text_only(self, mock_model_manager):
         result = analyze_multimodal(text="Flood reported")
@@ -250,11 +258,18 @@ class TestMultimodalAnalyzer:
 class TestEventAnalyzer:
     @pytest.fixture
     def mock_model_manager(self):
-        with patch("ai.services.multimodal_analyzer.model_manager") as mock:
+        # EventAnalyzer.analyze_event() delegates to analyze_multimodal(),
+        # which in turn uses the text/image/video analyzers' model_manager.
+        with ExitStack() as stack:
+            mocks = [
+                stack.enter_context(patch(f"ai.services.{name}.model_manager"))
+                for name in ("text_analyzer", "image_analyzer", "video_analyzer")
+            ]
             mock_model = MockModel()
-            mock.get_model.return_value = mock_model
-            mock.load_model.return_value = mock_model
-            yield mock
+            for mock in mocks:
+                mock.get_model.return_value = mock_model
+                mock.load_model.return_value = mock_model
+            yield mocks[0]
 
     def test_analyze_event_with_text(self, mock_model_manager):
         class MockEvent:

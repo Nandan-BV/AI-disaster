@@ -1,6 +1,6 @@
 from typing import Optional, List
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status as http_status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 
@@ -22,7 +22,7 @@ router = APIRouter(prefix="/resources", tags=["resources"])
 
 
 # Resource CRUD endpoints
-@router.post("", response_model=ResourceResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ResourceResponse, status_code=http_status.HTTP_201_CREATED)
 async def create_resource(
     resource: ResourceCreate,
     db: AsyncSession = Depends(get_db),
@@ -34,7 +34,7 @@ async def create_resource(
     if resource.capacity is not None and resource.current_load is not None:
         if resource.current_load > resource.capacity:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="current_load cannot exceed capacity"
             )
     
@@ -93,7 +93,7 @@ async def get_resource(
     resource = await service.get_resource_by_id(resource_id)
     if not resource:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=http_status.HTTP_404_NOT_FOUND,
             detail=f"Resource {resource_id} not found"
         )
     return ResourceResponse.model_validate(resource)
@@ -113,14 +113,14 @@ async def update_resource(
     if 'capacity' in update_data and 'current_load' in update_data:
         if update_data['current_load'] > update_data['capacity']:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="current_load cannot exceed capacity"
             )
     
     resource = await service.update_resource(resource_id, update_data)
     if not resource:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=http_status.HTTP_404_NOT_FOUND,
             detail=f"Resource {resource_id} not found"
         )
     return ResourceResponse.model_validate(resource)
@@ -137,13 +137,13 @@ async def update_resource_status(
     resource = await service.update_resource_status(resource_id, status_update.status)
     if not resource:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=http_status.HTTP_404_NOT_FOUND,
             detail=f"Resource {resource_id} not found"
         )
     return ResourceResponse.model_validate(resource)
 
 
-@router.delete("/{resource_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{resource_id}", status_code=http_status.HTTP_204_NO_CONTENT)
 async def delete_resource(
     resource_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -153,7 +153,7 @@ async def delete_resource(
     deleted = await service.delete_resource(resource_id)
     if not deleted:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=http_status.HTTP_404_NOT_FOUND,
             detail=f"Resource {resource_id} not found"
         )
 
@@ -177,7 +177,7 @@ async def get_nearby_resources(
             ResourceType(resource_type)
         except ValueError:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Invalid resource type: {resource_type}"
             )
     
@@ -187,7 +187,7 @@ async def get_nearby_resources(
             ResourceStatus(status)
         except ValueError:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Invalid status: {status}"
             )
     
@@ -246,7 +246,7 @@ async def get_incident_nearby_resources(
     incident = result.scalar_one_or_none()
     if not incident:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=http_status.HTTP_404_NOT_FOUND,
             detail=f"Incident {incident_id} not found"
         )
     
@@ -256,7 +256,7 @@ async def get_incident_nearby_resources(
             ResourceType(resource_type)
         except ValueError:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Invalid resource type: {resource_type}"
             )
     
@@ -266,7 +266,7 @@ async def get_incident_nearby_resources(
             ResourceStatus(status)
         except ValueError:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Invalid status: {status}"
             )
     
@@ -304,7 +304,7 @@ async def get_incident_resources_by_type(
     incident = result.scalar_one_or_none()
     if not incident:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=http_status.HTTP_404_NOT_FOUND,
             detail=f"Incident {incident_id} not found"
         )
     
@@ -312,7 +312,7 @@ async def get_incident_resources_by_type(
         infra_type = ResourceType(type)
     except ValueError:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Invalid resource type: {type}"
         )
     
@@ -322,7 +322,7 @@ async def get_incident_resources_by_type(
             infra_status = ResourceStatus(status)
         except ValueError:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Invalid status: {status}"
             )
     
@@ -355,7 +355,7 @@ async def get_incident_resource_counts(
     incident = result.scalar_one_or_none()
     if not incident:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=http_status.HTTP_404_NOT_FOUND,
             detail=f"Incident {incident_id} not found"
         )
     
@@ -375,7 +375,7 @@ async def get_resource_geojson(
     resource = await service.get_resource_by_id(resource_id)
     if not resource:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=http_status.HTTP_404_NOT_FOUND,
             detail=f"Resource {resource_id} not found"
         )
     
@@ -411,7 +411,7 @@ async def bulk_update_status(
         ResourceStatus(status)
     except ValueError:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Invalid status: {status}"
         )
     

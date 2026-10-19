@@ -1,20 +1,12 @@
-from langgraph.graph import StateGraph, START, END, Send
+from langgraph.graph import StateGraph, START, END
+from langgraph.types import Send
 
-from ..state.schemas import RefactorState, ModuleState
+from ..state.schemas import RefactorState
 from ..nodes.ast_scanner import ast_scanner_node
 from ..nodes.refactor_worker import parallel_refactor_worker
 from ..nodes.patch_applier import patch_applier_node
 from ..nodes.pytest_validator import pytest_validation_node
 from ..graph.routing import route_after_validation
-
-
-def create_refactor_worker_graph() -> StateGraph:
-    """Create the subgraph for parallel module refactoring."""
-    worker_graph = StateGraph(ModuleState)
-    worker_graph.add_node("refactor_worker", parallel_refactor_worker)
-    worker_graph.set_entry_point("refactor_worker")
-    worker_graph.set_finish_point("refactor_worker")
-    return worker_graph
 
 
 def map_refactor_workers(state: RefactorState):
@@ -38,6 +30,7 @@ def build_refactor_graph(max_retries: int = 3) -> StateGraph:
     graph = StateGraph(RefactorState)
 
     graph.add_node("ast_scanner_node", ast_scanner_node)
+    graph.add_node("refactor_worker", parallel_refactor_worker)
     graph.add_node("patch_applier_node", patch_applier_node)
     graph.add_node("pytest_validation_node", pytest_validation_node)
 

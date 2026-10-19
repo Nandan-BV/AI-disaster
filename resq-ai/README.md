@@ -10,6 +10,7 @@
 ## Phase 7: Emergency Resource Management ✓
 ## Phase 8: Resource Optimization (incomplete, not registered)
 ## Phase 9: Grounded AI Emergency Response Copilot ✓
+## Phase 10: Emergency Command Center Dashboard ✓
 
 ---
 
@@ -116,6 +117,23 @@ Grounded answer + safe tool trace + uncertainty
 Operator decides. The copilot cannot dispatch or approve.
 ```
 
+## Phase 10: Command Center Flow
+
+```
+Operator opens the command center (/)
+        ↓
+GET /dashboard/overview            (aggregated, read-only)
+GET /dashboard/incidents/summary   (filter · sort · paginate)
+        ↓
+Incidents · Events · Live Map · Evidence · Risk · Resources · Optimization · Copilot
+        ↓
+Incident workspace triggers analysis runs and records human approval decisions
+        ↓
+No new AI, no re-clustering, no re-optimization — integration only.
+```
+
+See `docs/emergency_command_center.md` for the full design.
+
 ## Project Structure
 
 ```
@@ -209,16 +227,39 @@ resq-ai/
 ├── frontend/
 │   ├── public/index.html
 │   └── src/
-│       ├── App.js                      # Main React component (with map view)
-│       ├── App.css                     # Styles
+│       ├── App.js                      # Router shell (Phase 10)
+│       ├── LegacyConsole.jsx           # Pre-dashboard single-page UI at /console
+│       ├── App.css                     # Shared/legacy styles
+│       ├── index.css                   # Global reset & base styles
+│       ├── index.js                    # Entry point
 │       ├── MapView.js                  # MapLibre GL component (Phase 5)
-│       ├── components/copilot/         # Phase 9 copilot UI
-│       │   ├── Copilot.jsx             # Chat panel, session, request handling
-│       │   ├── CopilotMessage.jsx      # One message + uncertainty
-│       │   ├── ToolActivity.jsx        # Safe tool trace per answer
-│       │   ├── IncidentContextPanel.jsx# Session, incident, suggestions
-│       │   └── ToolPermissionList.jsx  # Read-only vs controlled actions
-│       └── index.js                    # Entry point
+│       ├── api/
+│       │   ├── client.js               # Fetch wrapper + ApiError
+│       │   └── useAsyncData.js         # GET hook with status/reload
+│       ├── utils/
+│       │   └── format.js               # Date/number/colour helpers
+│       ├── components/
+│       │   ├── common/StateViews.jsx   # Loading / Error / Empty / Unavailable
+│       │   ├── layout/                 # Sidebar, TopNav, DashboardLayout
+│       │   └── copilot/                # Phase 9 copilot UI
+│       │       ├── Copilot.jsx             # Chat panel, session, request handling
+│       │       ├── CopilotMessage.jsx      # One message + uncertainty
+│       │       ├── ToolActivity.jsx        # Safe tool trace per answer
+│       │       ├── IncidentContextPanel.jsx# Session, incident, suggestions
+│       │       └── ToolPermissionList.jsx  # Read-only vs controlled actions
+│       └── pages/                      # Phase 10 pages
+│           ├── CommandCenter.jsx       # Landing dashboard
+│           ├── IncidentsPage.jsx       # Filterable incident list
+│           ├── IncidentDetail.jsx      # Incident workspace (tabs)
+│           ├── EventsPage.jsx          # Events + submit + analysis
+│           ├── LiveMapPage.jsx         # Map view
+│           ├── InvestigationsPage.jsx  # Evidence investigations
+│           ├── RiskPage.jsx            # Risk & impact
+│           ├── ResourcesPage.jsx       # Resource inventory
+│           ├── OptimizationPage.jsx    # Optimization + approvals
+│           ├── CopilotPage.jsx         # AI copilot
+│           ├── SystemStatusPage.jsx    # Health, volumes, tools
+│           └── pages.css               # Shared page styles
 ├── tests/
 │   ├── conftest.py                     # Pytest fixtures
 │   ├── test_events.py                  # Event API tests
@@ -233,14 +274,16 @@ resq-ai/
 │   ├── test_copilot_tools.py           # Toolset tests (Phase 9)
 │   ├── test_tool_grounding.py          # Answer grounding (Phase 9)
 │   ├── test_prompt_injection.py        # Untrusted-data handling (Phase 9)
-│   └── test_authorization.py           # Human-in-the-loop boundary (Phase 9)
+│   ├── test_authorization.py           # Human-in-the-loop boundary (Phase 9)
+│   └── test_dashboard.py               # Command center aggregation (Phase 10)
 ├── docs/
 │   ├── phase1-data-ingestion.md
 │   ├── phase2-multimodal-ai.md
 │   ├── phase3-incident-clustering.md
 │   ├── phase4-evidence-investigation.md
 │   ├── phase5-geospatial-intelligence.md
-│   └── emergency_response_copilot.md   # Phase 9 copilot
+│   ├── emergency_response_copilot.md   # Phase 9 copilot
+│   └── emergency_command_center.md     # Phase 10 command center
 ├── docker/
 ├── .env.example                        # Environment template
 ├── pytest.ini                          # Root pytest config
@@ -1039,6 +1082,33 @@ Note the absence of any approve, dispatch, or mutation tool at any setting.
 
 ---
 
+## Phase 10 API Endpoints: Command Center Dashboard
+
+Base URL: `http://localhost:8000/api/v1`
+
+Read-only aggregation over data produced by Phases 1-9. No recalculation.
+
+### Dashboard Overview
+
+```
+GET /dashboard/overview?limit_recent=20
+```
+
+Returns incident, event, resource, and optimization metrics plus recent
+incidents, recent events, and pending allocations. `limit_recent` is clamped to
+`1..50`. See `docs/emergency_command_center.md` for the full response shape.
+
+### Incident Summary
+
+```
+GET /dashboard/incidents/summary?status=&risk_level=&incident_type=&search=&sort_by=&order=&limit=&offset=
+```
+
+Filterable, sortable, paginated incident list. Invalid `status`, `risk_level`,
+`sort_by`, or `order` values return `422` before any database access.
+
+---
+
 ## API Endpoints
 ```
 GET /health
@@ -1250,40 +1320,37 @@ DELETE /events/{event_id}
 
 ### 1. Clone & Setup Backend
 
-```bash
-cd resq-ai/backend
+Run these commands from the `resq-ai` directory in PowerShell:
 
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+```powershell
+python -m venv backend\.venv
+.\backend\.venv\Scripts\Activate.ps1
 
-# Install dependencies (includes AI dependencies)
+Push-Location .\backend
 pip install -e ".[dev,ai]"
+Pop-Location
 
-# Configure environment
-cp ../.env.example .env
-# Edit .env with your database credentials and AI settings
-# For CPU-only: AI_DEVICE=cpu
+Copy-Item .env.example .env
 ```
+
+Edit `.env` and set `DATABASE_PASSWORD` to match the database password below.
+Set `COPILOT_PROVIDER=mock` to run the copilot without a model server or paid API.
+Image/video analysis uses a separate Transformers model and may download model
+weights on its first analysis request.
 
 ### 2. Start PostgreSQL with PostGIS
 
-```bash
-# Using Docker (recommended)
-docker run -d \
-  --name resq-ai-db \
-  -e POSTGRES_USER=postgres \
-  -e POSTGRES_PASSWORD=your_password \
-  -e POSTGRES_DB=resq_ai \
-  -p 5432:5432 \
-  postgis/postgis:15-3.4
+```powershell
+docker run -d --name resq-ai-db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=change_me -e POSTGRES_DB=resq_ai -p 5432:5432 postgis/postgis:15-3.4
 ```
 
 ### 3. Run Backend
 
-```bash
-cd resq-ai/backend
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+Update `.env` with `DATABASE_PASSWORD=change_me`, then from the `resq-ai`
+directory run:
+
+```powershell
+python -m uvicorn --app-dir backend app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 Backend runs at: http://localhost:8000
@@ -1295,15 +1362,17 @@ Subsequent requests are fast (model cached in memory).
 
 ### 4. Load Sample Data
 
-```bash
-cd resq-ai/data
-python load_sample_events.py
+From a PowerShell window in the `resq-ai` directory:
+
+```powershell
+$env:PYTHONPATH = "$PWD\backend;$PWD"
+python .\data\load_sample_events.py
 ```
 
 ### 5. Run Frontend
 
-```bash
-cd resq-ai/frontend
+```powershell
+cd .\frontend
 npm install
 npm start
 ```
@@ -1321,12 +1390,13 @@ backend with `COPILOT_PROVIDER=mock`.
 The default `COPILOT_PROVIDER=openai_compatible` expects an OpenAI-compatible server, which
 keeps the LLM out of the API process:
 
-```bash
+```powershell
 # vLLM
 vllm serve Qwen/Qwen2.5-7B-Instruct --port 8000
 
 # or Ollama
-ollama serve   # then COPILOT_API_BASE_URL=http://localhost:11434/v1
+ollama serve
+# Set COPILOT_API_BASE_URL=http://localhost:11434/v1 in .env
 ```
 
 See `docs/emergency_response_copilot.md` for the full copilot design.
@@ -1349,16 +1419,28 @@ python -m pytest tests/test_copilot.py tests/test_copilot_tools.py \
 
 These run against a fake session and a scripted LLM client.
 
+### Dashboard Tests (no database)
+
+```bash
+python -m pytest tests/test_dashboard.py -v
+```
+
+Aggregation helpers, payload mapping, and route validation run against a stub
+session; no live PostGIS database is required.
+
 ### Unit Tests (Mocked AI - Fast)
 ```bash
 python -m pytest tests/test_events.py tests/test_ai_analysis.py -v
 ```
 
-### Integration Tests (Requires Model - Slow)
+### API Integration Tests (Mocked AI)
+
 ```bash
-# Set environment variable to enable integration tests
-AI_INTEGRATION_TESTS=1 python -m pytest tests/test_analysis_api.py -v
+python -m pytest tests/test_analysis_api.py tests/test_geospatial_api.py -v
 ```
+
+These exercise API/database paths with a SQLite test database and mocked AI.
+They do not verify live model inference or PostGIS spatial predicates.
 
 ### Test Coverage
 
@@ -1370,9 +1452,16 @@ python -m pytest tests/ --cov=app --cov-report=term-missing
 - **Unit tests** (`test_events.py`, `test_ai_analysis.py`): Use mocked AI responses, run in seconds, no GPU required
 - **Integration tests** (`test_analysis_api.py`): Test full API flow with database, can optionally use real model
 - **Copilot tests**: No external dependencies at all
+- **Dashboard tests**: Stub-session aggregation and route validation, no database
 
-Several Phase 1-8 suites have pre-existing failures that need a live PostGIS database or
-contain stale model attribute names. See **Known Gaps**.
+The current full backend suite passes in the verified workspace. Spatial SQL
+still requires a separate run against PostgreSQL/PostGIS; SQLite test shims do
+not emulate spatial predicates.
+
+See [the system integration inventory](docs/system_integration_inventory.md),
+[integration notes](docs/full_system_integration.md), and
+[the project completion audit](docs/project_completion_audit.md) for verified
+behavior and remaining limitations.
 
 ---
 
@@ -1467,6 +1556,16 @@ contain stale model attribute names. See **Known Gaps**.
 | COPILOT_ALLOW_CONTROLLED_ACTIONS | Expose controlled actions to the model | false |
 
 `COPILOT_MAX_NEW_TOKENS` is accepted as an alias for `COPILOT_MAX_TOKENS`.
+
+---
+
+### Phase 10: Command Center Configuration
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| DASHBOARD_REFRESH_INTERVAL_SECONDS | Frontend polling cadence in seconds (>= 5) | 30 |
+| DASHBOARD_DEFAULT_PAGE_SIZE | Default page size for overview/summary | 20 |
+| DASHBOARD_MAX_PAGE_SIZE | Upper bound for the `limit` query parameter | 100 |
 
 ---
 
@@ -1656,8 +1755,10 @@ contain stale model attribute names. See **Known Gaps**.
 
 ## Known Gaps
 
-- **Phase 8 is incomplete** and its router is intentionally unregistered. Resource optimization and allocation do not work yet.
-- **Phase 1-8 test suites have pre-existing failures** unrelated to the copilot: wrong model attribute names in tests, SQLite fixtures against PostGIS-only schema, and tests that require a live database. `tests/test_risk_impact.py` was fixed (missing imports); the rest need live infrastructure.
+- **PostGIS behavior is not verified in the current environment.** Spatial SQL and indexes must be tested against PostgreSQL/PostGIS, not inferred from SQLite shims.
+- **Optimization and Phase 11 workflows need end-to-end verification.** The router and components exist, but persisted recommendation workflows have not been demonstrated as one full scenario.
+- **Schema evolution is not migration-managed.** Backend startup currently creates tables from metadata; add versioned Alembic migrations before production use.
+- **Live AI inference has not been tested.** Mock provider tests are deterministic test coverage, not evidence of model quality or inference readiness.
 - **No authentication yet.** `session_id` is an operator-supplied handle, not an authenticated identity. Add auth before exposing this beyond a trusted network.
 
 ---
@@ -1669,4 +1770,3 @@ contain stale model attribute names. See **Known Gaps**.
 - Streaming responses for long answers
 - Tool-calling evaluation suite across more incidents
 - External source verification (news, official feeds)
-
