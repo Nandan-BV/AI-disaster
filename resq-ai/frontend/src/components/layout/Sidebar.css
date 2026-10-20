@@ -107,7 +107,22 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  background: #8b95a6;
+}
+
+.status-dot.online {
   background: #2e7d32;
+}
+
+.status-dot.degraded {
+  background: #f9a825;
+}
+
+.status-dot.offline {
+  background: #d32f2f;
+}
+
+.status-dot.checking {
   animation: pulse 2s infinite;
 }
 

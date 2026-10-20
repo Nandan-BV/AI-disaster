@@ -35,6 +35,8 @@ export default function SystemStatusPage() {
               <dd>{health.data.project}</dd>
               <dt>Database</dt>
               <dd>{health.data.database}</dd>
+              <dt>Copilot service</dt>
+              <dd>{health.data.copilot || 'unknown'}</dd>
             </dl>
           )}
         </div>

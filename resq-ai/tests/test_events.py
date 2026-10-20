@@ -1,4 +1,5 @@
 import pytest
+from types import SimpleNamespace
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 from httpx import AsyncClient, ASGITransport
@@ -6,6 +7,8 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.pool import StaticPool
 
 from app.main import app
+from app.core.security import get_current_user
+from app.models.user import UserRole
 from app.database import get_db, Base
 from app.config import settings
 
@@ -50,15 +53,25 @@ async def db_session(test_engine):
 
 @pytest.fixture
 async def client(test_engine):
-    previous = app.dependency_overrides.get(get_db)
+    previous_db = app.dependency_overrides.get(get_db)
+    previous_user = app.dependency_overrides.get(get_current_user)
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(
+        id=uuid4(),
+        role=UserRole.ADMIN,
+        is_active=True,
+    )
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
-    if previous is None:
+    if previous_db is None:
         app.dependency_overrides.pop(get_db, None)
     else:
-        app.dependency_overrides[get_db] = previous
+        app.dependency_overrides[get_db] = previous_db
+    if previous_user is None:
+        app.dependency_overrides.pop(get_current_user, None)
+    else:
+        app.dependency_overrides[get_current_user] = previous_user
 
 
 def sample_event_data(**overrides):
@@ -90,6 +103,20 @@ class TestCreateEvent:
         assert data["longitude"] == 77.5946
         assert "id" in data
         assert UUID(data["id"])
+
+    @pytest.mark.asyncio
+    async def test_create_event_normalizes_timezone_aware_timestamp(self, client):
+        data = sample_event_data(
+            timestamp=datetime(2026, 10, 20, 12, 0, tzinfo=timezone.utc).isoformat()
+        )
+
+        response = await client.post("/api/v1/events", json=data)
+
+        assert response.status_code == 201
+        result = response.json()
+        assert result["timestamp"] == "2026-10-20T12:00:00"
+        assert "id" in result
+        assert UUID(result["id"])
 
     @pytest.mark.asyncio
     async def test_create_event_without_text_but_with_image(self, client):

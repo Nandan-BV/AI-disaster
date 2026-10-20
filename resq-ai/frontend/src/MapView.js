@@ -1,21 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { apiFetch } from './api';
 
 const API_BASE = '/api/v1';
-
-const INCIDENT_ICONS = {
-  flood: '🌊',
-  wildfire: '🔥',
-  earthquake: '🌍',
-  landslide: '🏔️',
-  cyclone: '🌀',
-  building_collapse: '🏢',
-  road_blockage: '🚧',
-  tornado: '🌪️',
-  volcanic_activity: '🌋',
-};
 
 const INFRASTRUCTURE_COLORS = {
   hospital: '#e53935',
@@ -30,18 +18,60 @@ const INFRASTRUCTURE_COLORS = {
   water_facility: '#29b6f6',
 };
 
-const INFRASTRUCTURE_ICONS = {
-  hospital: '🏥',
-  shelter: '🏠',
-  fire_station: '🚒',
-  police_station: '👮',
-  school: '🏫',
-  bridge: '🌉',
-  road: '🛣️',
-  emergency_center: '🚨',
-  power_station: '⚡',
-  water_facility: '💧',
-};
+const INFRASTRUCTURE_LAYERS = [
+  { key: 'hospitals', type: 'hospital', source: 'hospitals', label: 'Hospitals' },
+  { key: 'shelters', type: 'shelter', source: 'shelters', label: 'Shelters' },
+  { key: 'fire_stations', type: 'fire_station', source: 'fire-stations', label: 'Fire Stations' },
+  { key: 'police_stations', type: 'police_station', source: 'police-stations', label: 'Police' },
+  { key: 'bridges', type: 'bridge', source: 'bridges', label: 'Bridges' },
+  { key: 'roads', type: 'road', source: 'roads', label: 'Roads' },
+  {
+    key: 'emergency_centers',
+    type: 'emergency_center',
+    source: 'emergency-centers',
+    label: 'Emergency Centers',
+  },
+  { key: 'schools', type: 'school', source: 'schools', label: 'Schools' },
+  {
+    key: 'power_stations',
+    type: 'power_station',
+    source: 'power-stations',
+    label: 'Power Stations',
+  },
+  {
+    key: 'water_facilities',
+    type: 'water_facility',
+    source: 'water-facilities',
+    label: 'Water Facilities',
+  },
+];
+
+function coordinate(value, min, max) {
+  if (value == null || (typeof value === 'string' && !value.trim())) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= min && parsed <= max ? parsed : null;
+}
+
+function hasValidCoordinates(value) {
+  if (!Array.isArray(value) || value.length === 0) return false;
+  if (typeof value[0] === 'number') {
+    return (
+      value.length >= 2 &&
+      coordinate(value[0], -180, 180) !== null &&
+      coordinate(value[1], -90, 90) !== null
+    );
+  }
+  return value.every(hasValidCoordinates);
+}
+
+function hasValidGeometry(geometry) {
+  if (!geometry || typeof geometry !== 'object') return false;
+  if (geometry.type === 'GeometryCollection') {
+    return Array.isArray(geometry.geometries) &&
+      geometry.geometries.every(hasValidGeometry);
+  }
+  return hasValidCoordinates(geometry.coordinates);
+}
 
 function MapView({ incidentId, center, zoom = 13, liveEvents = [] }) {
   const mapContainer = useRef(null);
@@ -51,6 +81,12 @@ function MapView({ incidentId, center, zoom = 13, liveEvents = [] }) {
   const [mapData, setMapData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [basemapError, setBasemapError] = useState(null);
+  const mapLoadedRef = useRef(false);
+  const centerRef = useRef(center);
+  const zoomRef = useRef(zoom);
+  centerRef.current = center;
+  zoomRef.current = zoom;
   const [layersVisible, setLayersVisible] = useState({
     incident: true,
     area: true,
@@ -66,8 +102,43 @@ function MapView({ incidentId, center, zoom = 13, liveEvents = [] }) {
     water_facilities: true,
   });
 
+  const fetchMapData = useCallback(async () => {
+    if (!incidentId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await apiFetch(`${API_BASE}/incidents/${incidentId}/map-data`);
+      if (!response.ok) {
+        let message = `Failed to load map data (${response.status})`;
+        try {
+          const body = await response.json();
+          if (typeof body.detail === 'string') message = body.detail;
+        } catch {
+          // Keep the HTTP status message when the backend does not return JSON.
+        }
+        throw new Error(message);
+      }
+      const data = await response.json();
+      if (data?.type !== 'FeatureCollection' || !Array.isArray(data.features)) {
+        throw new Error('The backend returned an invalid map-data response.');
+      }
+      setMapData(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [incidentId]);
+
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
+    const longitude = coordinate(centerRef.current?.[0], -180, 180);
+    const latitude = coordinate(centerRef.current?.[1], -90, 90);
+    setMapLoaded(false);
+    setLoading(Boolean(incidentId));
+    setError(null);
+    setBasemapError(null);
+    setMapData(null);
 
     const mapInstance = new maplibregl.Map({
       container: mapContainer.current,
@@ -91,36 +162,55 @@ function MapView({ incidentId, center, zoom = 13, liveEvents = [] }) {
           }
         ]
       },
-      center: center || [77.5946, 12.9716],
-      zoom: zoom || 13,
+      center: longitude === null || latitude === null
+        ? [77.5946, 12.9716]
+        : [longitude, latitude],
+      zoom: zoomRef.current || 13,
     });
 
     map.current = mapInstance;
 
+    mapInstance.on('error', event => {
+      if (event.sourceId === 'osm') {
+        setBasemapError('OpenStreetMap tiles are unavailable. Check your network connection.');
+      } else if (!mapLoadedRef.current) {
+        setError(event.error?.message || 'The map could not be initialized.');
+      }
+    });
     mapInstance.on('load', () => {
+      mapLoadedRef.current = true;
       setMapLoaded(true);
       if (incidentId) {
         fetchMapData();
+      } else {
+        setLoading(false);
       }
     });
 
     return () => {
       mapInstance.remove();
       map.current = null;
+      mapLoadedRef.current = false;
       setMapLoaded(false);
     };
-  }, [incidentId]);
+  }, [fetchMapData, incidentId]);
 
   useEffect(() => {
     if (!mapLoaded || !map.current) return;
 
     const features = liveEvents
-      .filter(event => Number.isFinite(Number(event.longitude)) && Number.isFinite(Number(event.latitude)))
+      .filter(event =>
+        coordinate(event.longitude, -180, 180) !== null &&
+        coordinate(event.latitude, -90, 90) !== null
+      )
       .map(event => ({
         type: 'Feature',
         geometry: {
           type: 'Point',
-          coordinates: [Number(event.longitude), Number(event.latitude)],
+          coordinates: [
+            coordinate(event.longitude, -180, 180),
+            coordinate(event.latitude, -90, 90),
+          ],
         },
         properties: {
           id: event.id,
@@ -149,14 +239,18 @@ function MapView({ incidentId, center, zoom = 13, liveEvents = [] }) {
       });
     }
 
-    const latestEvent = liveEvents.find(event => (
-      Number.isFinite(Number(event.longitude)) && Number.isFinite(Number(event.latitude))
-    ));
+    const latestEvent = liveEvents.find(event =>
+      coordinate(event.longitude, -180, 180) !== null &&
+      coordinate(event.latitude, -90, 90) !== null
+    );
     if (latestEvent && latestEvent.id !== latestLiveEventId.current) {
       latestLiveEventId.current = latestEvent.id;
       if (!incidentId) {
         map.current.easeTo({
-          center: [Number(latestEvent.longitude), Number(latestEvent.latitude)],
+          center: [
+            coordinate(latestEvent.longitude, -180, 180),
+            coordinate(latestEvent.latitude, -90, 90),
+          ],
           zoom: Math.max(map.current.getZoom(), 12),
           duration: 400,
         });
@@ -164,74 +258,50 @@ function MapView({ incidentId, center, zoom = 13, liveEvents = [] }) {
     }
   }, [liveEvents, mapLoaded, incidentId]);
 
-  const fetchMapData = async () => {
-    if (!incidentId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await apiFetch(`${API_BASE}/incidents/${incidentId}/map-data`);
-      if (response.ok) {
-        const data = await response.json();
-        setMapData(data);
-        addMapLayers(data);
-      } else {
-        setError('Failed to load map data');
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const addMapLayers = (geojson) => {
-    if (!map.current || !geojson) return;
+  const addMapLayers = useCallback((geojson) => {
+    if (!map.current || !geojson || !Array.isArray(geojson.features)) return;
 
     const mapInstance = map.current;
 
-    // Clear existing dynamic layers
-    ['incident-point', 'analysis-area', 'hospitals', 'shelters', 'fire-stations', 
-     'police-stations', 'bridges', 'roads', 'emergency-centers', 'schools', 
-     'power-stations', 'water-facilities'].forEach(layerId => {
+    const layerIds = [
+      'analysis-area',
+      'incident-point',
+      ...INFRASTRUCTURE_LAYERS.map(({ source }) => source),
+    ];
+    layerIds.forEach(layerId => {
       if (mapInstance.getLayer(layerId)) mapInstance.removeLayer(layerId);
-      if (mapInstance.getSource(layerId)) mapInstance.removeSource(layerId);
     });
+    ['area', 'incident-point', ...INFRASTRUCTURE_LAYERS.map(({ source }) => source)]
+      .forEach(sourceId => {
+        if (mapInstance.getSource(sourceId)) mapInstance.removeSource(sourceId);
+      });
 
-    // Group features by type
-    const featuresByType = {
-      incident: [],
-      area: [],
-      hospitals: [],
-      shelters: [],
-      fire_stations: [],
-      police_stations: [],
-      bridges: [],
-      roads: [],
-      emergency_centers: [],
-      schools: [],
-      power_stations: [],
-      water_facilities: [],
-    };
+    const featuresByType = new Map(INFRASTRUCTURE_LAYERS.map(({ type }) => [type, []]));
+    const incidentFeatures = [];
+    const areaFeatures = [];
 
     geojson.features.forEach(feature => {
-      const props = feature.properties;
-      if (props.type === 'incident' || (props.id && props.id.toString().includes('incident'))) {
-        featuresByType.incident.push(feature);
-      } else if (props.name === 'Analysis Area') {
-        featuresByType.area.push(feature);
-      } else if (INFRASTRUCTURE_COLORS[props.type]) {
-        const key = props.type.replace('_', '-');
-        if (featuresByType[key]) {
-          featuresByType[key].push(feature);
-        }
+      if (
+        !feature ||
+        feature.type !== 'Feature' ||
+        !feature.properties ||
+        !hasValidGeometry(feature.geometry)
+      ) return;
+
+      if (feature.properties.id === incidentId) {
+        incidentFeatures.push(feature);
+      } else if (feature.properties.name === 'Analysis Area') {
+        areaFeatures.push(feature);
+      } else {
+        const layer = INFRASTRUCTURE_LAYERS.find(({ type }) => type === feature.properties.type);
+        if (layer) featuresByType.get(layer.type).push(feature);
       }
     });
 
-    // Add analysis area polygon first (bottom layer)
-    if (featuresByType.area.length && layersVisible.area) {
+    if (areaFeatures.length && layersVisible.area) {
       mapInstance.addSource('area', {
         type: 'geojson',
-        data: { type: 'FeatureCollection', features: featuresByType.area }
+        data: { type: 'FeatureCollection', features: areaFeatures }
       });
       mapInstance.addLayer({
         id: 'analysis-area',
@@ -245,11 +315,10 @@ function MapView({ incidentId, center, zoom = 13, liveEvents = [] }) {
       });
     }
 
-    // Add incident point
-    if (featuresByType.incident.length) {
+    if (incidentFeatures.length && layersVisible.incident) {
       mapInstance.addSource('incident-point', {
         type: 'geojson',
-        data: { type: 'FeatureCollection', features: featuresByType.incident }
+        data: { type: 'FeatureCollection', features: incidentFeatures }
       });
       mapInstance.addLayer({
         id: 'incident-point',
@@ -264,70 +333,36 @@ function MapView({ incidentId, center, zoom = 13, liveEvents = [] }) {
       });
     }
 
-    // Add infrastructure layers
-    Object.entries(featuresByType).forEach(([type, features]) => {
-      if (type === 'incident' || type === 'area' || !features.length) return;
-      
-      const visible = layersVisible[type];
-      if (!visible) return;
+    INFRASTRUCTURE_LAYERS.forEach(({ key, type, source }) => {
+      const features = featuresByType.get(type);
+      if (!features.length || !layersVisible[key]) return;
 
-      const sourceId = type.replace('_', '-');
-      const color = INFRASTRUCTURE_COLORS[type.replace('-', '_')] || '#666666';
-      const icon = INFRASTRUCTURE_ICONS[type.replace('-', '_')] || '📍';
-
-      mapInstance.addSource(sourceId, {
+      mapInstance.addSource(source, {
         type: 'geojson',
         data: { type: 'FeatureCollection', features }
       });
 
-      // Circle layer
       mapInstance.addLayer({
-        id: sourceId,
+        id: source,
         type: 'circle',
-        source: sourceId,
+        source,
         paint: {
           'circle-radius': 8,
-          'circle-color': color,
+          'circle-color': INFRASTRUCTURE_COLORS[type],
           'circle-stroke-width': 2,
           'circle-stroke-color': '#ffffff'
         }
       });
-
-      // Symbol layer for icons
-      mapInstance.addLayer({
-        id: `${sourceId}-labels`,
-        type: 'symbol',
-        source: sourceId,
-        layout: {
-          'text-field': icon,
-          'text-size': 16,
-          'text-offset': [0, -1.5],
-          'text-allow-overlap': true,
-        }
-      });
     });
-  };
+  }, [incidentId, layersVisible]);
 
-  const toggleLayer = (layer) => {
+  useEffect(() => {
+    if (mapLoaded && mapData) addMapLayers(mapData);
+  }, [addMapLayers, mapLoaded, mapData]);
+
+  const toggleLayer = layer => {
     setLayersVisible(prev => ({ ...prev, [layer]: !prev[layer] }));
-    if (mapData) addMapLayers(mapData);
   };
-
-  if (!mapLoaded) {
-    return (
-      <div className="map-container" style={{ height: '500px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div>Loading map...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="map-container" style={{ height: '500px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="error">Error: {error}</div>
-      </div>
-    );
-  }
 
   return (
     <div className="map-section">
@@ -427,7 +462,29 @@ function MapView({ incidentId, center, zoom = 13, liveEvents = [] }) {
         </label>
       </div>
       <div ref={mapContainer} className="map-container" style={{ height: '500px' }} />
-      {loading && <div className="map-loading">Loading map data...</div>}
+      {!mapLoaded && (
+        <div className="map-status" role="status">
+          {error || 'Loading map…'}
+        </div>
+      )}
+      {error && mapLoaded && (
+        <div className="map-status" role="alert">
+          {error}
+        </div>
+      )}
+      {basemapError && (
+        <div className="map-notice" role="status">
+          {basemapError} Incident overlays may still be available.
+        </div>
+      )}
+      {loading && mapLoaded && !error && (
+        <div className="map-status" role="status">Loading incident map data…</div>
+      )}
+      {!loading && mapLoaded && !error && mapData?.features.length === 0 && (
+        <div className="map-status" role="status">
+          No incident or infrastructure coordinates are available for this map.
+        </div>
+      )}
     </div>
   );
 }

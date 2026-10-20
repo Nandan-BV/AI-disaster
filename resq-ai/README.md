@@ -24,7 +24,9 @@ From the `resq-ai` directory, run `docker compose up --build`. This starts PostG
 
 The database uses the local-development password `postgres` by default. Set `DATABASE_PASSWORD` in a local `.env` file to override it. Docker Compose accepts the `.env` file as optional, so the stack can start with the defaults.
 
-For local development, ensure the root `.env` contains your database credentials, then run `alembic -c backend/alembic.ini upgrade head` from `resq-ai/`. The Docker backend applies migrations automatically before starting.
+For local development, ensure the root `.env` contains your database credentials,
+then run `python -m alembic -c backend/alembic.ini upgrade head` from `resq-ai/`.
+The Docker backend applies migrations automatically before starting.
 
 ## Authentication
 
@@ -1384,8 +1386,12 @@ Update `.env` with `DATABASE_PASSWORD=change_me`, then from the `resq-ai`
 directory run:
 
 ```powershell
+python -m alembic -c .\backend\alembic.ini upgrade head
 python -m uvicorn --app-dir backend app.main:app --reload --host 0.0.0.0 --port 8000
 ```
+
+Apply migrations after starting PostgreSQL/PostGIS and before starting the API;
+the application does not create or reset the database automatically.
 
 Backend runs at: http://localhost:8000
 API Docs: http://localhost:8000/docs
@@ -1421,19 +1427,25 @@ backend with `COPILOT_PROVIDER=mock`.
 
 ### Running a Model for the Copilot
 
-The default `COPILOT_PROVIDER=openai_compatible` expects an OpenAI-compatible server, which
-keeps the LLM out of the API process:
+The default `COPILOT_PROVIDER=openai_compatible` connects to Ollama at
+`http://localhost:11434/v1` (configured by `OLLAMA_BASE_URL`). For example:
 
 ```powershell
-# vLLM
-vllm serve Qwen/Qwen2.5-7B-Instruct --port 8000
-
-# or Ollama
 ollama serve
-# Set COPILOT_API_BASE_URL=http://localhost:11434/v1 in .env
+ollama pull qwen2.5-coder:7b
 ```
 
-See `docs/emergency_response_copilot.md` for the full copilot design.
+For another OpenAI-compatible provider, set `COPILOT_API_BASE_URL` to its
+`/v1` endpoint and set `COPILOT_MODEL_NAME` to a model it serves. Do not use
+port 8000 for a second local model server while the RESQ-AI API uses that port.
+
+The configured local Qwen model was verified for text inference, but it did
+not return the structured tool calls required for grounded Copilot answers.
+The application now fails closed rather than returning unsupported answers.
+Use `COPILOT_PROVIDER=mock` for an offline UI/API smoke test; a real Copilot
+demonstration requires a model/provider whose tool-call behavior has been
+validated. See [the Ollama setup and limitation notes](./docs/ollama_setup.md)
+and [the Copilot design](./docs/emergency_response_copilot.md).
 
 ---
 
@@ -1572,9 +1584,10 @@ behavior and remaining limitations.
 | Variable | Description | Default |
 |----------|-------------|---------|
 | COPILOT_PROVIDER | LLM serving stack: openai_compatible, transformers, mock | openai_compatible |
-| COPILOT_MODEL_NAME | Model served by the provider | Qwen/Qwen2.5-7B-Instruct |
+| COPILOT_MODEL_NAME | Model served by the provider | qwen2.5-coder:7b |
 | COPILOT_MODEL_REVISION | Model revision (in-process provider) | main |
-| COPILOT_API_BASE_URL | OpenAI-compatible endpoint | http://localhost:8000/v1 |
+| OLLAMA_BASE_URL | Ollama server URL when no explicit API URL is set | http://localhost:11434 |
+| COPILOT_API_BASE_URL | Explicit OpenAI-compatible `/v1` endpoint; blank uses Ollama base URL | (derived) |
 | COPILOT_API_KEY | Auth token, if the endpoint requires one | (none) |
 | COPILOT_DEVICE | Device for in-process provider: auto, cuda, cpu, mps | auto |
 | COPILOT_DTYPE | dtype for in-process provider | auto |

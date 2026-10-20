@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
+import { useAsyncData } from '../../api/useAsyncData';
 import './Sidebar.css';
 
 const NAV_ITEMS = [
@@ -16,6 +17,31 @@ const NAV_ITEMS = [
 ];
 
 export default function Sidebar({ isOpen, onClose }) {
+  const health = useAsyncData('/health');
+
+  useEffect(() => {
+    const interval = window.setInterval(health.reload, 30000);
+    return () => window.clearInterval(interval);
+  }, [health.reload]);
+
+  let statusLabel = 'Checking system status';
+  let statusClass = 'checking';
+  if (health.data?.status === 'ok' && health.data.database === 'connected') {
+    statusLabel = health.data.copilot === 'unavailable'
+      ? 'System degraded'
+      : 'System operational';
+    statusClass = health.data.copilot === 'unavailable' ? 'degraded' : 'online';
+  } else if (health.data?.status === 'degraded' || health.status === 503) {
+    statusLabel = 'System degraded';
+    statusClass = 'degraded';
+  } else if (health.error) {
+    statusLabel = 'System unavailable';
+    statusClass = 'offline';
+  } else if (!health.loading) {
+    statusLabel = 'System status unknown';
+    statusClass = 'unknown';
+  }
+
   return (
     <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="sidebar-header">
@@ -39,9 +65,9 @@ export default function Sidebar({ isOpen, onClose }) {
         </ul>
       </nav>
       <div className="sidebar-footer">
-        <div className="sidebar-status">
-          <span className="status-dot online"></span>
-          <span>System Operational</span>
+        <div className="sidebar-status" role="status" aria-live="polite">
+          <span className={`status-dot ${statusClass}`} aria-hidden="true"></span>
+          <span>{statusLabel}</span>
         </div>
       </div>
     </aside>

@@ -41,7 +41,11 @@ class OpenAICompatibleClient(LLMClient):
         api_key: Optional[str] = None,
         timeout: Optional[float] = None,
     ) -> None:
-        self._base_url = (base_url or settings.COPILOT_API_BASE_URL or "").rstrip("/")
+        self._base_url = (
+            base_url
+            or settings.COPILOT_API_BASE_URL
+            or f"{settings.OLLAMA_BASE_URL.rstrip('/')}/v1"
+        ).rstrip("/")
         self._model_name = model_name or settings.COPILOT_MODEL_NAME
         self._api_key = api_key if api_key is not None else settings.COPILOT_API_KEY
         self._timeout = timeout or float(settings.COPILOT_TIMEOUT_SECONDS)
@@ -152,8 +156,7 @@ class OpenAICompatibleClient(LLMClient):
                 f"The copilot model did not respond within {self._timeout:.0f}s."
             ) from exc
         except httpx.HTTPStatusError as exc:
-            detail = exc.response.text[:300]
-            logger.error("Copilot endpoint returned %s: %s", exc.response.status_code, detail)
+            logger.error("Copilot endpoint returned HTTP %s.", exc.response.status_code)
             raise CopilotLLMError(
                 f"The copilot model returned an error ({exc.response.status_code})."
             ) from exc
@@ -217,14 +220,21 @@ class OpenAICompatibleClient(LLMClient):
             ) from exc
 
     async def health_check(self) -> bool:
-        """Return True when the configured model server answers."""
+        """Return True only when the configured model is served."""
         if not self._base_url:
             return False
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.get(f"{self._base_url}/models", headers=self._headers())
-                return response.status_code < 500
-        except httpx.HTTPError:
+                response.raise_for_status()
+                data = response.json()
+                models = data.get("data") if isinstance(data, dict) else None
+                return isinstance(models, list) and any(
+                    model.get("id") == self._model_name
+                    for model in models
+                    if isinstance(model, dict)
+                )
+        except (httpx.HTTPError, ValueError):
             return False
 
     def is_available(self) -> bool:

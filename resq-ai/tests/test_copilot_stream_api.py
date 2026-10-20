@@ -6,6 +6,7 @@ from app.ai.llm.base import Message
 from app.ai.llm.openai_compatible import OpenAICompatibleClient
 from app.database import get_db
 from app.main import app
+from app.core.security import get_current_user
 
 
 def test_copilot_stream_endpoint_emits_sse_events():
@@ -18,6 +19,7 @@ def test_copilot_stream_endpoint_emits_sse_events():
         yield {"type": "done", "sources": [], "tools_used": []}
 
     app.dependency_overrides[get_db] = override_db
+    app.dependency_overrides[get_current_user] = lambda: object()
     try:
         with patch("app.api.copilot.CopilotService") as service_factory:
             service_factory.return_value.answer_stream = answer_stream
@@ -32,6 +34,7 @@ def test_copilot_stream_endpoint_emits_sse_events():
         assert 'event: done\r\ndata: {"sources": [], "tools_used": []}' in response.text
     finally:
         app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_user, None)
 
 
 def test_normalized_tool_calls_are_serialized_for_follow_up_generation():

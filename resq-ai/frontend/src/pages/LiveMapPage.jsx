@@ -5,6 +5,20 @@ import { LoadingState, ErrorState, EmptyState } from '../components/common/State
 import MapView from '../MapView';
 import { statusColor } from '../utils/format';
 
+function isValidCoordinate(value, min, max) {
+  if (value == null || (typeof value === 'string' && !value.trim())) return false;
+  const coordinate = Number(value);
+  return Number.isFinite(coordinate) && coordinate >= min && coordinate <= max;
+}
+
+function hasCoordinates(incident) {
+  return Boolean(
+    incident &&
+    isValidCoordinate(incident.centroid_latitude, -90, 90) &&
+    isValidCoordinate(incident.centroid_longitude, -180, 180)
+  );
+}
+
 export default function LiveMapPage() {
   const incidents = useAsyncData('/incidents');
   const [selectedId, setSelectedId] = useState(null);
@@ -16,8 +30,9 @@ export default function LiveMapPage() {
   }, [list, selectedId]);
 
   const selected = list.find((i) => i.id === selectedId) || null;
-  const hasCoords =
-    selected && selected.centroid_latitude != null && selected.centroid_longitude != null;
+  const latitude = Number(selected?.centroid_latitude);
+  const longitude = Number(selected?.centroid_longitude);
+  const hasCoords = hasCoordinates(selected);
 
   return (
     <div className="page">
@@ -56,11 +71,11 @@ export default function LiveMapPage() {
                       {incident.status}
                     </span>
                   </div>
-                  {incident.centroid_latitude == null && (
+                  {!hasCoordinates(incident) ? (
                     <span className="muted" title="No coordinates">
                       no coords
                     </span>
-                  )}
+                  ) : null}
                 </div>
               ))}
             </div>
@@ -78,7 +93,7 @@ export default function LiveMapPage() {
                 {hasCoords ? (
                   <MapView
                     incidentId={selected.id}
-                    center={[selected.centroid_longitude, selected.centroid_latitude]}
+                    center={[longitude, latitude]}
                     zoom={13}
                   />
                 ) : (

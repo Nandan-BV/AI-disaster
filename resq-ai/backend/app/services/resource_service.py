@@ -5,7 +5,7 @@ from datetime import datetime
 import json
 from sqlalchemy import select, func, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
-from geoalchemy2 import WKTElement
+from geoalchemy2 import Geography, WKTElement
 from geoalchemy2.functions import ST_Distance, ST_SetSRID, ST_MakePoint, ST_AsGeoJSON
 
 from app.config import settings
@@ -169,13 +169,13 @@ class ResourceService:
             Resource.organization,
             Resource.metadata,
             func.ST_Distance(
-                Resource.location.cast('geography'),
-                func.ST_SetSRID(func.ST_MakePoint(longitude, latitude), 4326).cast('geography')
+                Resource.location.cast(Geography(srid=4326)),
+                func.ST_SetSRID(func.ST_MakePoint(longitude, latitude), 4326).cast(Geography(srid=4326))
             ).label('distance_meters')
         ).where(
             func.ST_Distance(
-                Resource.location.cast('geography'),
-                func.ST_SetSRID(func.ST_MakePoint(longitude, latitude), 4326).cast('geography')
+                Resource.location.cast(Geography(srid=4326)),
+                func.ST_SetSRID(func.ST_MakePoint(longitude, latitude), 4326).cast(Geography(srid=4326))
             ) <= radius
         )
         
@@ -246,8 +246,8 @@ class ResourceService:
             func.count(Resource.id).label('count')
         ).where(
             func.ST_Distance(
-                Resource.location.cast('geography'),
-                func.ST_SetSRID(func.ST_MakePoint(longitude, latitude), 4326).cast('geography')
+                Resource.location.cast(Geography(srid=4326)),
+                func.ST_SetSRID(func.ST_MakePoint(longitude, latitude), 4326).cast(Geography(srid=4326))
             ) <= radius
         ).group_by(Resource.resource_type)
         
@@ -329,8 +329,8 @@ class ResourceService:
             func.ST_AsGeoJSON(Resource.location).label('geojson')
         ).where(
             func.ST_Distance(
-                Resource.location.cast('geography'),
-                func.ST_SetSRID(func.ST_MakePoint(longitude, latitude), 4326).cast('geography')
+                Resource.location.cast(Geography(srid=4326)),
+                func.ST_SetSRID(func.ST_MakePoint(longitude, latitude), 4326).cast(Geography(srid=4326))
             ) <= radius
         )
         

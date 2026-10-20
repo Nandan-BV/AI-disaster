@@ -37,7 +37,6 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index('idx_events_location', 'events', ['location'], unique=False, postgresql_using='gist')
     op.create_index(op.f('ix_events_event_type'), 'events', ['event_type'], unique=False)
     op.create_index('ix_events_location', 'events', ['location'], unique=False, postgresql_using='gist')
     op.create_index(op.f('ix_events_source'), 'events', ['source'], unique=False)
@@ -81,10 +80,8 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index('idx_infrastructure_location', 'infrastructure', ['location'], unique=False, postgresql_using='gist')
     op.create_index(op.f('ix_infrastructure_infrastructure_type'), 'infrastructure', ['infrastructure_type'], unique=False)
     op.create_index('ix_infrastructure_location', 'infrastructure', ['location'], unique=False, postgresql_using='gist')
-    op.create_index(op.f('ix_infrastructure_location'), 'infrastructure', ['location'], unique=False)
     op.create_index(op.f('ix_infrastructure_status'), 'infrastructure', ['status'], unique=False)
     op.create_index('ix_infrastructure_type_status', 'infrastructure', ['infrastructure_type', 'status'], unique=False)
     op.create_table('population_zones',
@@ -101,8 +98,6 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index('idx_population_zones_geometry', 'population_zones', ['geometry'], unique=False, postgresql_using='gist')
-    op.create_index('idx_population_zones_location', 'population_zones', ['location'], unique=False, postgresql_using='gist')
     op.create_index('ix_population_zones_geometry', 'population_zones', ['geometry'], unique=False, postgresql_using='gist')
     op.create_index('ix_population_zones_location', 'population_zones', ['location'], unique=False, postgresql_using='gist')
     op.create_table('resources',
@@ -126,8 +121,6 @@ def upgrade() -> None:
     sa.CheckConstraint('current_load IS NULL OR current_load >= 0', name='ck_resources_current_load_non_negative'),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index('idx_resources_location', 'resources', ['location'], unique=False, postgresql_using='gist')
-    op.create_index(op.f('ix_resources_location'), 'resources', ['location'], unique=False)
     op.create_index('ix_resources_location', 'resources', ['location'], unique=False, postgresql_using='gist')
     op.create_index(op.f('ix_resources_resource_type'), 'resources', ['resource_type'], unique=False)
     op.create_index(op.f('ix_resources_status'), 'resources', ['status'], unique=False)
@@ -248,7 +241,6 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['incident_id'], ['incidents.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index('idx_incident_analysis_areas_geometry', 'incident_analysis_areas', ['geometry'], unique=False, postgresql_using='gist')
     op.create_index('ix_incident_analysis_area_geometry', 'incident_analysis_areas', ['geometry'], unique=False, postgresql_using='gist')
     op.create_index(op.f('ix_incident_analysis_areas_incident_id'), 'incident_analysis_areas', ['incident_id'], unique=True)
     op.create_table('incident_events',

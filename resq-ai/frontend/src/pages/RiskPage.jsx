@@ -125,6 +125,9 @@ export default function RiskPage() {
 
               {error && <div className="error-banner">{error}</div>}
               {risk.loading && <LoadingState />}
+              {risk.error && risk.status !== 404 && (
+                <ErrorState message={risk.error} onRetry={risk.reload} />
+              )}
               {risk.status === 404 && (
                 <UnavailableState message="No risk assessment yet. Run one above." />
               )}
@@ -152,7 +155,7 @@ export default function RiskPage() {
                     <Bar label="Evidence" value={riskData.evidence_component} />
                     <Bar label="Population" value={riskData.population_component} />
                     <Bar label="Infrastructure" value={riskData.infrastructure_component} />
-                    <Bar label="Environment" value={riskData.environmental_component} />
+                    <Bar label="Environment" value={riskData.environment_component} />
                     <Bar label="Accessibility" value={riskData.accessibility_component} />
                   </div>
                 </div>
@@ -161,6 +164,10 @@ export default function RiskPage() {
 
             <div className="card">
               <h3 className="section-title">Impact</h3>
+              {impact.loading && <LoadingState />}
+              {impact.error && impact.status !== 404 && (
+                <ErrorState message={impact.error} onRetry={impact.reload} />
+              )}
               {impact.status === 404 && (
                 <UnavailableState message="No impact assessment yet." />
               )}

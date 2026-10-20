@@ -5,7 +5,7 @@ from uuid import UUID
 
 from sqlalchemy import select, func, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
-from geoalchemy2 import WKTElement
+from geoalchemy2 import Geography, WKTElement
 from geoalchemy2.functions import ST_Distance, ST_Buffer, ST_Intersects, ST_Area, ST_SetSRID, ST_MakePoint
 from geoalchemy2.shape import to_shape
 
@@ -178,13 +178,13 @@ async def calculate_population_component(
         PopulationZone.latitude,
         PopulationZone.longitude,
         ST_Distance(
-            PopulationZone.location.cast('geography'),
-            incident_point.cast('geography')
+            PopulationZone.location.cast(Geography(srid=4326)),
+            incident_point.cast(Geography(srid=4326))
         ).label('distance_meters')
     ).where(
         ST_Distance(
-            PopulationZone.location.cast('geography'),
-            incident_point.cast('geography')
+            PopulationZone.location.cast(Geography(srid=4326)),
+            incident_point.cast(Geography(srid=4326))
         ) <= settings.DEFAULT_INCIDENT_RADIUS_METERS
     )
     
@@ -253,13 +253,13 @@ async def calculate_infrastructure_component(
         Infrastructure.status,
         Infrastructure.capacity,
         ST_Distance(
-            Infrastructure.location.cast('geography'),
-            incident_point.cast('geography')
+            Infrastructure.location.cast(Geography(srid=4326)),
+            incident_point.cast(Geography(srid=4326))
         ).label('distance_meters')
     ).where(
         ST_Distance(
-            Infrastructure.location.cast('geography'),
-            incident_point.cast('geography')
+            Infrastructure.location.cast(Geography(srid=4326)),
+            incident_point.cast(Geography(srid=4326))
         ) <= settings.DEFAULT_INCIDENT_RADIUS_METERS
     )
     
@@ -421,15 +421,15 @@ async def calculate_accessibility_component(
         Infrastructure.name,
         Infrastructure.road_status,
         ST_Distance(
-            Infrastructure.location.cast('geography'),
-            incident_point.cast('geography')
+            Infrastructure.location.cast(Geography(srid=4326)),
+            incident_point.cast(Geography(srid=4326))
         ).label('distance_meters')
     ).where(
         and_(
             Infrastructure.infrastructure_type == InfrastructureType.ROAD,
             ST_Distance(
-                Infrastructure.location.cast('geography'),
-                incident_point.cast('geography')
+                Infrastructure.location.cast(Geography(srid=4326)),
+                incident_point.cast(Geography(srid=4326))
             ) <= settings.DEFAULT_INCIDENT_RADIUS_METERS
         )
     )
@@ -451,15 +451,15 @@ async def calculate_accessibility_component(
         Infrastructure.name,
         Infrastructure.road_status,
         ST_Distance(
-            Infrastructure.location.cast('geography'),
-            incident_point.cast('geography')
+            Infrastructure.location.cast(Geography(srid=4326)),
+            incident_point.cast(Geography(srid=4326))
         ).label('distance_meters')
     ).where(
         and_(
             Infrastructure.infrastructure_type == InfrastructureType.BRIDGE,
             ST_Distance(
-                Infrastructure.location.cast('geography'),
-                incident_point.cast('geography')
+                Infrastructure.location.cast(Geography(srid=4326)),
+                incident_point.cast(Geography(srid=4326))
             ) <= settings.DEFAULT_INCIDENT_RADIUS_METERS
         )
     )
@@ -673,8 +673,8 @@ async def calculate_impact_assessment(
         func.sum(PopulationZone.population * PopulationZone.vulnerability_factor).label('weighted_pop')
     ).where(
         ST_Distance(
-            PopulationZone.location.cast('geography'),
-            incident_point.cast('geography')
+            PopulationZone.location.cast(Geography(srid=4326)),
+            incident_point.cast(Geography(srid=4326))
         ) <= settings.DEFAULT_INCIDENT_RADIUS_METERS
     )
     pop_result = await db.execute(pop_query)
@@ -690,8 +690,8 @@ async def calculate_impact_assessment(
         func.count(Infrastructure.id).label('count')
     ).where(
         ST_Distance(
-            Infrastructure.location.cast('geography'),
-            ST_SetSRID(ST_MakePoint(incident.centroid_longitude, incident.centroid_latitude), 4326).cast('geography')
+            Infrastructure.location.cast(Geography(srid=4326)),
+            ST_SetSRID(ST_MakePoint(incident.centroid_longitude, incident.centroid_latitude), 4326).cast(Geography(srid=4326))
         ) <= settings.DEFAULT_INCIDENT_RADIUS_METERS
     ).group_by(Infrastructure.infrastructure_type)
     
@@ -705,8 +705,8 @@ async def calculate_impact_assessment(
         and_(
             Infrastructure.infrastructure_type == InfrastructureType.ROAD,
             ST_Distance(
-                Infrastructure.location.cast('geography'),
-                ST_SetSRID(ST_MakePoint(incident.centroid_longitude, incident.centroid_latitude), 4326).cast('geography')
+                Infrastructure.location.cast(Geography(srid=4326)),
+                ST_SetSRID(ST_MakePoint(incident.centroid_longitude, incident.centroid_latitude), 4326).cast(Geography(srid=4326))
             ) <= settings.DEFAULT_INCIDENT_RADIUS_METERS
         )
     )

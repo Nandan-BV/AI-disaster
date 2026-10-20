@@ -135,6 +135,10 @@ def is_operational_request(text: str) -> bool:
     return not any(p.search(text) for p in _INQUIRY_RE)
 
 MAX_TOOL_ITERATIONS = 6
+NO_GROUNDED_DATA_ANSWER = (
+    "I could not retrieve supporting RESQ-AI data, so I cannot provide a "
+    "grounded answer. Select an incident or retry when the relevant data is available."
+)
 
 
 def load_system_prompt() -> str:
@@ -398,6 +402,13 @@ class CopilotService:
                         )
                     continue
 
+                if not trace:
+                    answer_text = NO_GROUNDED_DATA_ANSWER
+                    uncertainty.append("No supporting RESQ-AI data was retrieved.")
+                    async for token in self._text_chunks(answer_text):
+                        yield {"type": "token", "token": token}
+                    break
+
                 async for token in self.client.chat_completion_stream(
                     messages=prompt,
                     tools=None,
@@ -513,6 +524,13 @@ class CopilotService:
                 raise
 
             if not response.tool_calls:
+                if not trace:
+                    return CopilotAnswer(
+                        answer=NO_GROUNDED_DATA_ANSWER,
+                        incident_id=incident_id,
+                        model_name=model_name,
+                        uncertainty=["No supporting RESQ-AI data was retrieved."],
+                    )
                 return CopilotAnswer(
                     answer=response.content
                     or "The copilot could not produce an answer from the available data.",

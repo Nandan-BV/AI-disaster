@@ -186,6 +186,8 @@ export default function EventsPage() {
                   id="latitude"
                   type="number"
                   step="0.0001"
+                  min="-90"
+                  max="90"
                   value={form.latitude}
                   onChange={(e) => setField('latitude', e.target.value)}
                   required
@@ -197,6 +199,8 @@ export default function EventsPage() {
                   id="longitude"
                   type="number"
                   step="0.0001"
+                  min="-180"
+                  max="180"
                   value={form.longitude}
                   onChange={(e) => setField('longitude', e.target.value)}
                   required
@@ -212,12 +216,13 @@ export default function EventsPage() {
               />
             </div>
             <div className="field">
-              <label htmlFor="text_content">Text content</label>
+              <label htmlFor="text_content">Text content *</label>
               <textarea
                 id="text_content"
                 rows="3"
                 value={form.text_content}
                 onChange={(e) => setField('text_content', e.target.value)}
+                required
               />
             </div>
             <div className="field">
@@ -257,9 +262,15 @@ export default function EventsPage() {
                       <span className="badge outline">{event.event_type || 'unknown'}</span>
                       <span className="muted">{event.source}</span>
                     </div>
+                    <div style={{ marginTop: 4 }}>
+                      {event.text_content || 'No text content'}
+                    </div>
                     <div className="muted" style={{ fontSize: '0.82rem', marginTop: 4 }}>
                       {event.location_name || `${event.latitude}, ${event.longitude}`} ·{' '}
                       {formatDateTime(event.timestamp)}
+                    </div>
+                    <div className="muted" style={{ fontSize: '0.75rem', marginTop: 4 }}>
+                      ID: {event.id}
                     </div>
                   </div>
                   <button

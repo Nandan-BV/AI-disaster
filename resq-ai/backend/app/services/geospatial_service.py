@@ -1,9 +1,10 @@
+import json
 from typing import Optional, List, Dict, Any
 from uuid import UUID
 from dataclasses import dataclass
 from sqlalchemy import select, func, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
-from geoalchemy2 import WKTElement
+from geoalchemy2 import Geography, Geometry, WKTElement
 from geoalchemy2.functions import ST_Distance, ST_Buffer, ST_AsGeoJSON, ST_Transform, ST_SetSRID, ST_MakePoint
 from geoalchemy2.shape import to_shape
 
@@ -75,7 +76,7 @@ class GeospatialService:
         # Create point and buffer using PostGIS
         point = ST_SetSRID(ST_MakePoint(lon, lat), 4326)
         # Use geography for accurate buffer in meters
-        buffer_geom = ST_Buffer(point.cast('geography'), radius).cast('geometry')
+        buffer_geom = ST_Buffer(point.cast(Geography(srid=4326)), radius).cast(Geometry(srid=4326))
 
         # Check if area already exists
         result = await self.db.execute(
@@ -137,13 +138,13 @@ class GeospatialService:
             Infrastructure.road_status,
             Infrastructure.metadata,
             ST_Distance(
-                Infrastructure.location.cast('geography'),
-                incident_point.cast('geography')
+                Infrastructure.location.cast(Geography(srid=4326)),
+                incident_point.cast(Geography(srid=4326))
             ).label('distance_meters')
         ).where(
             ST_Distance(
-                Infrastructure.location.cast('geography'),
-                incident_point.cast('geography')
+                Infrastructure.location.cast(Geography(srid=4326)),
+                incident_point.cast(Geography(srid=4326))
             ) <= radius
         )
 
@@ -254,6 +255,8 @@ class GeospatialService:
                 select(ST_AsGeoJSON(area.geometry))
             )
             area_geojson = result.scalar()
+            if isinstance(area_geojson, str):
+                area_geojson = json.loads(area_geojson)
 
         # Get nearby infrastructure
         nearby = await self.get_nearby_infrastructure(incident_id, limit=200)
@@ -262,7 +265,7 @@ class GeospatialService:
         features = []
 
         # Incident point
-        if incident.centroid_latitude and incident.centroid_longitude:
+        if incident.centroid_latitude is not None and incident.centroid_longitude is not None:
             features.append({
                 "type": "Feature",
                 "properties": {

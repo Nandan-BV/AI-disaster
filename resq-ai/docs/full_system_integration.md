@@ -1,5 +1,10 @@
 # RESQ-AI Full-System Integration Notes
 
+> Historical run record: the test counts and unavailable-database observations
+> below predate the isolated PostGIS validation. Use the current
+> [application acceptance report](./application_acceptance_report.md) for the
+> latest test, startup, database, and workflow results.
+
 ## Reproducible local startup (PowerShell)
 
 Run commands from the `resq-ai` directory.
@@ -30,11 +35,13 @@ Run commands from the `resq-ai` directory.
    project root so the sibling `ai` package and `.env` file can be found:
 
    ```powershell
+   python -m alembic -c .\backend\alembic.ini upgrade head
    python -m uvicorn --app-dir backend app.main:app --reload --host 0.0.0.0 --port 8000
    ```
 
-   The backend creates tables on startup using SQLAlchemy metadata. The repo
-   currently has no versioned Alembic configuration/revisions.
+   Apply the versioned Alembic migrations after PostgreSQL/PostGIS is running
+   and before starting the API. The application does not create or reset the
+   database automatically.
 
 4. In another terminal, start the React development server:
 

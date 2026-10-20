@@ -1,6 +1,7 @@
 from typing import Optional, List
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -111,7 +112,6 @@ async def get_evidence(
     )
 
     # Get total count
-    from sqlalchemy import select, func
     count_query = select(func.count()).select_from(
         select(Evidence.id).where(Evidence.incident_id == incident_id)
     )

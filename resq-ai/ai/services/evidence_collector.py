@@ -20,11 +20,7 @@ logger = logging.getLogger(__name__)
 class CollectedEvidence:
     """Container for collected evidence from an event."""
     event_id: UUID
-<<<<<<< HEAD
     incident_id: Optional[UUID] = None
-=======
-    incident_id: UUID
->>>>>>> origin/main
     event_text: Optional[str] = None
     event_source: Optional[str] = None
     event_timestamp: Optional[datetime] = None

@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.api import events
+from app.core.security import get_current_user
 from app.database import get_db
 from app.live_events import EventConnectionManager
 from app.main import app
@@ -47,6 +48,7 @@ def test_event_ingestion_broadcasts_to_websocket_clients():
         yield object()
 
     app.dependency_overrides[get_db] = override_db
+    app.dependency_overrides[get_current_user] = lambda: object()
     try:
         with TestClient(app) as client:
             with client.websocket_connect("/ws/events") as websocket:
@@ -73,3 +75,4 @@ def test_event_ingestion_broadcasts_to_websocket_clients():
                 assert message["event"]["id"] == str(event.id)
     finally:
         app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_user, None)

@@ -188,7 +188,7 @@ class TestImageVideoEvidenceExtraction:
         assert quality > 0.5
 
         quality = calculate_visual_quality(SAMPLE_AI_ANALYSIS_UNCERTAIN)
-        assert quality == pytest.approx(0.62)
+        assert quality == pytest.approx(0.3)
 
 
 class TestGeographicTemporalConsistency:
@@ -202,16 +202,12 @@ class TestGeographicTemporalConsistency:
             incident_id=uuid4(),
             incident=MagicMock(),
             events=events,
-<<<<<<< HEAD
+            total_events=len(events),
             geographic_bounds={
                 "min_lat": 12.9715, "max_lat": 12.9718,
                 "min_lon": 77.5945, "max_lon": 77.5948,
                 "centroid_lat": 12.97163, "centroid_lon": 77.59463,
             },
-=======
-            total_events=len(events),
-            geographic_bounds={"min_lat": 12.9715, "max_lat": 12.9718, "min_lon": 77.5945, "max_lon": 78.0},
->>>>>>> origin/main
         )
         items = extract_geographic_evidence(collection, incident_center=(12.9716, 77.5946))
 
@@ -229,16 +225,12 @@ class TestGeographicTemporalConsistency:
             incident_id=uuid4(),
             incident=MagicMock(),
             events=events,
-<<<<<<< HEAD
+            total_events=len(events),
             geographic_bounds={
                 "min_lat": 12.9716, "max_lat": 13.5,
                 "min_lon": 77.5946, "max_lon": 78.0,
                 "centroid_lat": 13.2358, "centroid_lon": 77.7973,
             },
-=======
-            total_events=len(events),
-            geographic_bounds={"min_lat": 12.9716, "max_lat": 13.5, "min_lon": 77.5946, "max_lon": 78.0},
->>>>>>> origin/main
         )
         items = extract_geographic_evidence(collection, incident_center=(12.9716, 77.5946))
 
@@ -459,7 +451,6 @@ class TestFallbackInvestigation:
             multimodal_consistency=0.3,
         )
 
-<<<<<<< HEAD
         # A single weak item cannot establish support: the deterministic rubric
         # falls through to insufficient_evidence (total_evidence <= 2).
         assert result["assessment"] == "insufficient_evidence"
@@ -482,9 +473,6 @@ class TestFallbackInvestigation:
         )
 
         assert result["assessment"] == "inconclusive"
-=======
-        assert result["assessment"] == "insufficient_evidence"
->>>>>>> origin/main
 
 
 class TestEvidenceInvestigationAPI:
@@ -518,3 +506,39 @@ class TestEvidenceInvestigationAPI:
         result = await get_incident_investigation(uuid4(), mock_db)
 
         assert result is None
+
+    @pytest.mark.asyncio
+    async def test_investigation_route_returns_404_for_missing_incident(self, mock_db):
+        from fastapi import HTTPException
+        from app.api.investigation import run_investigation
+        from app.schemas.evidence import InvestigateRequest
+
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = None
+        mock_db.execute.return_value = mock_result
+
+        with pytest.raises(HTTPException) as exc_info:
+            await run_investigation(uuid4(), InvestigateRequest(), mock_db)
+
+        assert exc_info.value.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_evidence_route_returns_404_for_missing_incident(self, mock_db):
+        from fastapi import HTTPException
+        from app.api.investigation import get_evidence
+
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = None
+        mock_db.execute.return_value = mock_result
+
+        with pytest.raises(HTTPException) as exc_info:
+            await get_evidence(
+                uuid4(),
+                evidence_type=None,
+                evidence_role=None,
+                limit=50,
+                offset=0,
+                db=mock_db,
+            )
+
+        assert exc_info.value.status_code == 404

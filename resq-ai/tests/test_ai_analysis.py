@@ -191,21 +191,6 @@ class TestVideoAnalyzer:
 
 class TestMultimodalAnalyzer:
     @pytest.fixture
-<<<<<<< HEAD
-    def mock_model_manager(self):
-        # analyze_multimodal() has no module-level model_manager: it delegates
-        # to the text/image/video analyzers, so those are the patch targets.
-        with ExitStack() as stack:
-            mocks = [
-                stack.enter_context(patch(f"ai.services.{name}.model_manager"))
-                for name in ("text_analyzer", "image_analyzer", "video_analyzer")
-            ]
-            mock_model = MockModel()
-            for mock in mocks:
-                mock.get_model.return_value = mock_model
-                mock.load_model.return_value = mock_model
-            yield mocks[0]
-=======
     def mock_analyzers(self):
         with patch(
             "ai.services.multimodal_analyzer.analyze_text",
@@ -218,7 +203,6 @@ class TestMultimodalAnalyzer:
             return_value=MOCK_VIDEO_ANALYSIS,
         ) as video_analyzer:
             yield text_analyzer, image_analyzer, video_analyzer
->>>>>>> origin/main
 
     def test_analyze_text_only(self, mock_analyzers):
         result = analyze_multimodal(text="Flood reported")
@@ -272,21 +256,6 @@ class TestMultimodalAnalyzer:
 
 class TestEventAnalyzer:
     @pytest.fixture
-<<<<<<< HEAD
-    def mock_model_manager(self):
-        # EventAnalyzer.analyze_event() delegates to analyze_multimodal(),
-        # which in turn uses the text/image/video analyzers' model_manager.
-        with ExitStack() as stack:
-            mocks = [
-                stack.enter_context(patch(f"ai.services.{name}.model_manager"))
-                for name in ("text_analyzer", "image_analyzer", "video_analyzer")
-            ]
-            mock_model = MockModel()
-            for mock in mocks:
-                mock.get_model.return_value = mock_model
-                mock.load_model.return_value = mock_model
-            yield mocks[0]
-=======
     def mock_analyzers(self):
         with patch(
             "ai.services.multimodal_analyzer.analyze_text",
@@ -299,7 +268,6 @@ class TestEventAnalyzer:
             return_value=MOCK_VIDEO_ANALYSIS,
         ) as video_analyzer:
             yield text_analyzer, image_analyzer, video_analyzer
->>>>>>> origin/main
 
     def test_analyze_event_with_text(self, mock_analyzers):
         class MockEvent:

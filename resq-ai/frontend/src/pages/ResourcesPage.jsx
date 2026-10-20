@@ -45,7 +45,7 @@ export default function ResourcesPage() {
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
 
-  const all = Array.isArray(resources.data) ? resources.data : [];
+  const all = Array.isArray(resources.data?.resources) ? resources.data.resources : [];
   const counts = STATUSES.reduce((acc, s) => {
     acc[s] = all.filter((r) => r.status === s).length;
     return acc;

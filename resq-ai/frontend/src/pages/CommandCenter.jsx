@@ -18,8 +18,12 @@ export default function CommandCenter() {
   const [error, setError] = useState(null);
   const [lastRefresh, setLastRefresh] = useState(null);
   const navigate = useNavigate();
+  const recentIncidents = data?.recent_incidents || [];
+  const recentEvents = data?.recent_events || [];
+  const pendingApprovals = data?.pending_approvals || [];
 
   const fetchOverview = async () => {
+    setLoading(true);
     try {
       const result = await apiGet('/dashboard/overview');
       setData(result);
@@ -107,11 +111,13 @@ export default function CommandCenter() {
             <Link to="/incidents" className="view-all">View All</Link>
           </div>
           <div className="panel-content">
-            {data?.recent_incidents?.length === 0 ? (
+            {!data && error ? (
+              <div className="empty-state">Incident data is unavailable.</div>
+            ) : recentIncidents.length === 0 ? (
               <div className="empty-state">No incidents found</div>
             ) : (
               <div className="incident-list">
-                {data.recent_incidents
+                {recentIncidents
                   .filter(i => i.risk_level === 'critical' || i.risk_level === 'high')
                   .slice(0, 5)
                   .map((incident) => (
@@ -138,7 +144,7 @@ export default function CommandCenter() {
                   ))}
               </div>
             )}
-            {data?.recent_incidents?.filter(i => i.risk_level === 'critical' || i.risk_level === 'high').length === 0 && (
+            {data && recentIncidents.filter(i => i.risk_level === 'critical' || i.risk_level === 'high').length === 0 && (
               <div className="empty-state">No critical or high-risk incidents</div>
             )}
           </div>
@@ -151,11 +157,13 @@ export default function CommandCenter() {
             <Link to="/events" className="view-all">View All</Link>
           </div>
           <div className="panel-content">
-            {data?.recent_events?.length === 0 ? (
+            {!data && error ? (
+              <div className="empty-state">Event data is unavailable.</div>
+            ) : recentEvents.length === 0 ? (
               <div className="empty-state">No events recorded</div>
             ) : (
               <div className="event-list">
-                {data.recent_events.slice(0, 5).map((event) => (
+                {recentEvents.slice(0, 5).map((event) => (
                   <div key={event.id} className="event-row">
                     <div className="event-info">
                       <div className="event-type-badge">{event.event_type || 'unknown'}</div>
@@ -179,11 +187,13 @@ export default function CommandCenter() {
             <Link to="/optimization" className="view-all">View All</Link>
           </div>
           <div className="panel-content">
-            {data?.pending_approvals?.length === 0 ? (
+            {!data && error ? (
+              <div className="empty-state">Approval data is unavailable.</div>
+            ) : pendingApprovals.length === 0 ? (
               <div className="empty-state">No pending approvals</div>
             ) : (
               <div className="approval-list">
-                {data.pending_approvals.slice(0, 5).map((approval) => (
+                {pendingApprovals.slice(0, 5).map((approval) => (
                   <Link key={approval.allocation_id} to={`/incidents/${approval.incident_id}`} className="approval-row">
                     <div className="approval-info">
                       <div className="approval-incident">{approval.incident_title}</div>
@@ -212,15 +222,21 @@ export default function CommandCenter() {
         <div className="panel-content">
           <div className="resource-summary-grid">
             <div className="resource-summary-card available">
-              <div className="resource-summary-value">{data?.resource_metrics?.available || 0}</div>
+              <div className="resource-summary-value">
+                {data ? data.resource_metrics?.available ?? 0 : 'N/A'}
+              </div>
               <div className="resource-summary-label">Available</div>
             </div>
             <div className="resource-summary-card deployed">
-              <div className="resource-summary-value">{data?.resource_metrics?.deployed || 0}</div>
+              <div className="resource-summary-value">
+                {data ? data.resource_metrics?.deployed ?? 0 : 'N/A'}
+              </div>
               <div className="resource-summary-label">Deployed</div>
             </div>
             <div className="resource-summary-card total">
-              <div className="resource-summary-value">{data?.resource_metrics?.total || 0}</div>
+              <div className="resource-summary-value">
+                {data ? data.resource_metrics?.total ?? 0 : 'N/A'}
+              </div>
               <div className="resource-summary-label">Total Resources</div>
             </div>
           </div>

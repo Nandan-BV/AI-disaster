@@ -3,14 +3,25 @@ import asyncio
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import OperationalError
 from app.config import settings
-<<<<<<< HEAD
-from app.database import init_db, close_db
-from app.api import health, events, analysis, incidents, investigation, geospatial, risk, resources, copilot, optimization, dashboard
-=======
 from app.database import AsyncSessionLocal, close_db
 from app.services.external_ingestion import poll_external_feeds
-from app.api import auth, health, events, analysis, incidents, investigation, geospatial, risk, resources, copilot, optimization
+from app.api import (
+    analysis,
+    auth,
+    copilot,
+    dashboard,
+    events,
+    geospatial,
+    health,
+    incidents,
+    investigation,
+    optimization,
+    resources,
+    risk,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +44,6 @@ async def _run_external_ingestion_scheduler() -> None:
             raise
         except Exception:
             logger.exception("Unexpected error while polling external disaster feeds.")
->>>>>>> origin/main
 
 
 @asynccontextmanager
@@ -58,6 +68,20 @@ app = FastAPI(
     version=settings.VERSION,
     lifespan=lifespan,
 )
+
+
+@app.exception_handler(ConnectionError)
+@app.exception_handler(OperationalError)
+async def handle_database_unavailable(
+    request,
+    exc: OperationalError | ConnectionError,
+) -> JSONResponse:
+    logger.error("Database request failed because the database is unavailable.")
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Database service is unavailable."},
+    )
+
 
 app.add_middleware(
     CORSMiddleware,

@@ -5,7 +5,7 @@ from datetime import datetime
 
 from sqlalchemy import select, func, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
-from geoalchemy2 import WKTElement
+from geoalchemy2 import Geography, WKTElement
 from geoalchemy2.functions import ST_Distance, ST_SetSRID, ST_MakePoint
 
 from app.config import settings
@@ -296,8 +296,8 @@ async def find_suitable_resources(
     search_point = f"POINT({incident_location[1]} {incident_location[0]})"
     query = query.where(
         func.ST_Distance(
-            Resource.location.cast('geography'),
-            func.ST_SetSRID(func.ST_MakePoint(longitude, latitude), 4326).cast('geography')
+            Resource.location.cast(Geography(srid=4326)),
+            func.ST_SetSRID(func.ST_MakePoint(longitude, latitude), 4326).cast(Geography(srid=4326))
         ) <= 50000
     )
     

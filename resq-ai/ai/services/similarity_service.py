@@ -1,11 +1,12 @@
 import logging
-import datetime
+import datetime as dt
 from datetime import datetime
 from typing import Optional, List, Tuple
 from dataclasses import dataclass
 
-from sqlalchemy import select, func
+from sqlalchemy import cast, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from geoalchemy2 import Geography
 from geoalchemy2.functions import ST_Distance, ST_Transform
 from geoalchemy2.shape import to_shape
 
@@ -65,7 +66,13 @@ async def calculate_geographic_distance(
         point2 = WKTElement(f"POINT({lon2} {lat2})", srid=4326)
 
         # Use geography type for accurate distance in meters
-        query = select(ST_Distance(point1, point2, use_spheroid=True))
+        query = select(
+            ST_Distance(
+                cast(point1, Geography(srid=4326)),
+                cast(point2, Geography(srid=4326)),
+                use_spheroid=True,
+            )
+        )
         result = await db.execute(query)
         distance = result.scalar()
         return float(distance) if distance is not None else float("inf")
@@ -220,7 +227,7 @@ async def find_candidate_events(
     max_time_minutes = max_time_minutes or ai_config.MAX_TIME_DIFFERENCE_MINUTES
 
     # Time window
-    time_threshold = event.timestamp - datetime.timedelta(minutes=max_time_minutes)
+    time_threshold = event.timestamp - dt.timedelta(minutes=max_time_minutes)
 
     # Geographic filter using PostGIS
     from geoalchemy2 import WKTElement
@@ -232,9 +239,13 @@ async def find_candidate_events(
         and_(
             Event.id != event.id,  # Exclude self
             Event.timestamp >= time_threshold,
-            Event.timestamp <= event.timestamp + datetime.timedelta(minutes=max_time_minutes),
+            Event.timestamp <= event.timestamp + dt.timedelta(minutes=max_time_minutes),
             # Spatial filter
-            func.ST_Distance(Event.location, event_point, use_spheroid=True) <= max_distance,
+            func.ST_Distance(
+                Event.location.cast(Geography(srid=4326)),
+                cast(event_point, Geography(srid=4326)),
+                use_spheroid=True,
+            ) <= max_distance,
         )
     ).order_by(Event.timestamp.desc())
 

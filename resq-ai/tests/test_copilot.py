@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from app.ai.copilot import CopilotService
+from app.ai.copilot import CopilotService, NO_GROUNDED_DATA_ANSWER
 from app.ai.llm.base import ChatCompletionResponse
 from app.ai.tools import register_all_tools
 from app.models.event import Event
@@ -316,6 +316,42 @@ async def test_answer_stream_emits_tokens_and_persists(world):
         getattr(message, "content", None) == "Live streamed response"
         for message in session.added
     )
+
+
+async def test_ungrounded_model_response_is_not_returned_without_tool_data(world):
+    session, _ = world
+    answer, _ = await ask(
+        session,
+        [final("There is one active flood incident at MG Road.")],
+        "What incidents are active?",
+    )
+
+    assert answer.answer == NO_GROUNDED_DATA_ANSWER
+    assert answer.sources == []
+    assert answer.tools_used == []
+    assert answer.uncertainty == ["No supporting RESQ-AI data was retrieved."]
+
+
+async def test_stream_does_not_emit_model_answer_without_tool_data(world):
+    session, _ = world
+    service = CopilotService(
+        db=session,
+        client=ScriptedLLMClient([final("There is one active flood incident.")]),
+    )
+    service._next_sequence = AsyncMock(return_value=1)
+
+    events = [
+        event
+        async for event in service.answer_stream(
+            session_id="ungrounded-stream",
+            message="What incidents are active?",
+        )
+    ]
+
+    tokens = [event["token"] for event in events if event["type"] == "token"]
+    assert "".join(tokens) == NO_GROUNDED_DATA_ANSWER
+    assert events[-1]["sources"] == []
+    assert events[-1]["tools_used"] == []
 
 
 # -- spec 50 walkthrough -----------------------------------------------------

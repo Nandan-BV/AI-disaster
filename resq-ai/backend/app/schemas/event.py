@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from pydantic import BaseModel, Field, field_validator, model_validator
 from uuid import UUID
@@ -24,6 +24,13 @@ class EventCreate(BaseModel):
         if not v or not v.strip():
             raise ValueError("Source cannot be empty")
         return v.strip()
+
+    @field_validator("timestamp")
+    @classmethod
+    def normalize_timestamp_to_utc(cls, value: datetime) -> datetime:
+        if value.tzinfo is not None and value.utcoffset() is not None:
+            return value.astimezone(timezone.utc).replace(tzinfo=None)
+        return value
 
     @field_validator("image_url", "video_url")
     @classmethod

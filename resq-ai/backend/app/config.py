@@ -1,9 +1,5 @@
 from pydantic_settings import BaseSettings
-<<<<<<< HEAD
-from pydantic import AliasChoices, Field, field_validator
-=======
-from pydantic import AliasChoices, Field, model_validator
->>>>>>> origin/main
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from typing import Optional
 
 
@@ -108,16 +104,15 @@ class Settings(BaseSettings):
     OPT_SOLVER_TIME_LIMIT_SECONDS: int = Field(default=30, alias="OPT_SOLVER_TIME_LIMIT_SECONDS")
     
     # LLM Configuration (Phase 9)
-    # COPILOT_PROVIDER selects the serving path:
-    #   "openai_compatible" -> any local OpenAI-compatible server (vLLM, Ollama,
-    #                          llama.cpp, LM Studio, TGI). Serving framework stays
-    #                          configurable; nothing is hard-coded to one runtime.
+    # The compatible client talks to the local Ollama OpenAI-compatible API by
+    # default; no OpenAI SDK or API key is required.
     #   "transformers"     -> in-process transformers loading (development only).
     #   "mock"             -> deterministic offline stub used by the test suite.
     COPILOT_PROVIDER: str = Field(default="openai_compatible", alias="COPILOT_PROVIDER")
-    COPILOT_MODEL_NAME: str = Field(default="Qwen/Qwen2.5-7B-Instruct", alias="COPILOT_MODEL_NAME")
+    COPILOT_MODEL_NAME: str = Field(default="qwen2.5-coder:7b", alias="COPILOT_MODEL_NAME")
     COPILOT_MODEL_REVISION: str = Field(default="main", alias="COPILOT_MODEL_REVISION")
-    COPILOT_API_BASE_URL: Optional[str] = Field(default="http://localhost:8000/v1", alias="COPILOT_API_BASE_URL")
+    OLLAMA_BASE_URL: str = Field(default="http://localhost:11434", alias="OLLAMA_BASE_URL")
+    COPILOT_API_BASE_URL: Optional[str] = Field(default=None, alias="COPILOT_API_BASE_URL")
     # Optional. Empty by default so no external credential is required. If a local
     # server enforces a placeholder key, set it here or in the environment.
     COPILOT_API_KEY: Optional[str] = Field(default=None, alias="COPILOT_API_KEY")
